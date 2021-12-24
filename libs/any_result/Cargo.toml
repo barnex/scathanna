@@ -1,0 +1,5 @@
+[package]
+name = "any_result"
+version = "1.0.0"
+authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
+edition = "2021"

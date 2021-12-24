@@ -1,0 +1,20 @@
+[workspace]
+
+members = [
+    "libs/any_result",
+    "libs/gl_obj",
+    "libs/gl_safe",
+    "libs/matrix",
+    "libs/vector",
+    "libs/wavefrontobj",
+    "libs/imageutil",
+    "libs/raytrace",
+
+    "scathanna_core",
+    "scathanna_server",
+    "scathanna_client",
+]
+
+exclude = [
+    "obj2map",
+]

@@ -1,0 +1,10 @@
+[package]
+name = "obj2map"
+version = "1.0.0"
+authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+any_result = { path = "../libs/any_result"}
+wavefrontobj = { path = "../libs/wavefrontobj"}
+

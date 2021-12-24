@@ -1,0 +1,9 @@
+[package]
+name = "matrix"
+version = "1.0.0"
+authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+vector = {path = "../vector"}

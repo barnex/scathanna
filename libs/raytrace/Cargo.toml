@@ -1,0 +1,11 @@
+[package]
+name = "raytrace"
+version = "1.0.0"
+authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+vector = {path = "../vector"}
+matrix = {path = "../matrix"}
+imageutil = {path = "../imageutil"}
+rand = "0.8"

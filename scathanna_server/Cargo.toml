@@ -1,0 +1,14 @@
+[package]
+name = "scathanna_server"
+version = "1.0.0"
+authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+any_result = {path = "../libs/any_result"}
+scathanna_core = {path = "../scathanna_core"}
+structopt = "0.3"
+fnv = "1"
+
+[profile.release]
+lto = true

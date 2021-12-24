@@ -1,0 +1,9 @@
+#! /bin/bash
+set -e
+
+if (git ls-files --others --exclude-standard | grep .) then echo "untracked files"; exit 1; fi
+
+cargo test
+
+echo -n TODOs\:
+echo $(( $(git grep TODO | wc -l) -2 ))

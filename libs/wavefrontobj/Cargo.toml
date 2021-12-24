@@ -1,0 +1,10 @@
+[package]
+name = "wavefrontobj"
+version = "1.0.0"
+authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+any_result = {path="../any_result"}
+vector = {path="../vector"}
+smallvec = "1"

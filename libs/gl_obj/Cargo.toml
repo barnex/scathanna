@@ -1,0 +1,10 @@
+[package]
+name = "gl_obj"
+version = "0.1.0"
+authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+gl_safe = { path = "../gl_safe" }
+vector = { path = "../vector" }
+gl = "0.14"
