@@ -38,14 +38,25 @@ $EDITOR config.json
 	"alpha_blending": true
 }
 ```
+4. Optional: run a game server
+
+```
+cargo run --release --bin scathanna_server 127.0.0.1:3344 deck
+
+```
+
+(where "deck" is the name of a map found in `assets/maps`).
 
 
-4. Connect to a game server;
+5. Connect to a game server
+
+if you have installed:
 ```
 cd scathanna-3d
 scathanna
 ```
-or:
+
+or, without installing:
 ```
 cd scathanna-3d
 cargo run --release --bin scathanna
@@ -65,7 +76,7 @@ These are the most options to set in `config.json`:
 The most useful options are:
 
   * `"vsync": false` Use this on disable vertical sync on slow hardware if your FPS counter runs below 60 FPS.
-  * `"msaa":4` Set anti-aliasing quality (1,2,4,8,...). Useful on slow hardware.
+  * `"msaa":4` Set anti-aliasing quality (0,1,2,4,8,...). Useful on slow hardware.
   * `"fullscreen": true` Run in borderless fullscreen mode.
   * `"mouse_sensitivity": 100` Set mouse sensitivity (100 = normal speed).
   * `"movement_keys": "wasd"` Choose other movement keys (up, left, down, right). Arrow keys always work regardless of this setting.
