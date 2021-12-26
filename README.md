@@ -10,7 +10,7 @@ A 3D multiplayer shooter.
 
 2. Fetch and compile:
 ```
-git clone https://github.com/barnex/scathanna-3d.git`
+git clone https://github.com/barnex/scathanna-3d.git
 cd scathanna-3d
 cargo install --path scathanna
 ```
