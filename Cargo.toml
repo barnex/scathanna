@@ -12,7 +12,7 @@ members = [
 
     "scathanna_core",
     "scathanna_server",
-    "scathanna_client",
+    "scathanna",
 ]
 
 exclude = [

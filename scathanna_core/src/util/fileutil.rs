@@ -29,6 +29,13 @@ pub fn abs_path(file: &Path) -> PathBuf {
 		return file.to_owned();
 	}
 
+	if let Ok(wd) = std::env::current_dir() {
+		let abs = wd.join(file);
+		if abs.exists() {
+			return abs;
+		}
+	}
+
 	match std::env::current_exe() {
 		Err(e) => {
 			eprintln!("ERROR getting executable path: {}.\nPlease run this command from the directory containing `assets/`", e);

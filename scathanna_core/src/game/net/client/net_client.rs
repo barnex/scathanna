@@ -16,17 +16,16 @@ pub struct NetClient {
 	gl_client: GLClient,
 }
 
-
 impl NetClient {
 	/// Create a client connected to a game server, as specified by command-line options.
-	pub fn connect(opts: ClientOpts) -> Result<Self> {
-		println!("connecting to {}...", &opts.addr);
-		let mut tcp_stream = TcpStream::connect(&opts.addr)?;
+	pub fn connect(opts: &Config) -> Result<Self> {
+		println!("connecting to {}...", &opts.server);
+		let mut tcp_stream = TcpStream::connect(&opts.server)?;
 		println!("connection accepted, joining...");
 
 		let avatar_id = parse_avatar_id(&opts.avatar)?;
 
-		serialize_into(&mut tcp_stream, &JoinMsg { name: opts.name, avatar_id })?;
+		serialize_into(&mut tcp_stream, &JoinMsg { name: opts.name.clone(), avatar_id })?;
 		tcp_stream.flush()?;
 
 		let accepted_msg: ServerMsg = deserialize_from(&mut tcp_stream)?;

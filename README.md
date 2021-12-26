@@ -10,56 +10,62 @@ A 3D multiplayer shooter.
 
 2. Fetch and compile:
 ```
-git clone https://github.com/barnex/scathanna.git`
-cd scathanna
-cargo install --path scathanna_client
+git clone https://github.com/barnex/scathanna-3d.git`
+cd scathanna-3d
+cargo install --path scathanna
 ```
 
-3. (Optional) install the game server:
+3. Edit your preferences in `config.json`. In particular, set your nickname and a server address.
 ```
-cargo install --path scathanna_server
+cd scathanna-3d
+$EDITOR config.json
 ```
+
+```
+{
+	"server": "127.0.0.1:3344",   <== set host:port here
+	"name": "Nameless Frog",      <== chose a nickname
+	"avatar": "hamster",          <== chose frog|panda|turkey|pig|hamster|chicken|bunny
+	"movement_keys": "wasd",      <== configure keys (arrow keys always work, too)
+	"mouse_sensitivity": 100,
+	"window_width": 1024,
+	"window_height": 768,
+	"window_resizable": false,
+	"fullscreen": false,
+	"vsync": true,
+	"max_fps": 200,
+	"msaa": 4,
+	"alpha_blending": true
+}
+```
+
 
 4. Connect to a game server;
 ```
-scathanna_client join 111.222.333.444:5555 --name Bob
+cd scathanna-3d
+scathanna
+```
+or:
+```
+cd scathanna-3d
+cargo run --release --bin scathanna
 ```
 
 ## Client options
 
-These are the most useful command-line options when joining a game:
+These are the most options to set in `config.json`:
 
-  * `--name MyName` sets your nickname
-  * `--avatar frog|panda|turkey|pig|hamster|chicken|bunny` sets how you look
+  * `"server": "host:port"` game server to connect to
+  * `"name": "MyName"` sets your nickname
+  * `"avatar": frog|panda|turkey|pig|hamster|chicken|bunny` sets how you look
 
-E.g.:
-
-```
-scathanna_client join join 111.222.333.444:5555 --name Chuck --avatar chicken
-```
 
 ## Graphics/input options
 
-Graphics options are passed before `join`:
-
-```
-scathanna_client --no-vsync --fullscreen join 111.222.333.444:5555 --name Alice
-```
 The most useful options are:
 
-  * `--no-vsync` Disable vertical sync. Use this on slow hardware if your FPS counter runs below 60 FPS.
-  * `--msaa=4` Set anti-aliasing quality (1,2,4,8,...). Useful on slow hardware.
-  * `--fullscreen` Run in borderless fullscreen mode.
-  * `--mouse-sens=100` Set mouse sensitivity (100 = normal speed).
-
-
-E.g.:
-
-```
-scathanna_client \
-   --fullscreen \
-   --no-vsync \
-   --msaa=2 \
-   --mouse-sens 150 \
-   join 111.222.333.444:5555 --name Sloth
-```
+  * `"vsync": false` Use this on disable vertical sync on slow hardware if your FPS counter runs below 60 FPS.
+  * `"msaa":4` Set anti-aliasing quality (1,2,4,8,...). Useful on slow hardware.
+  * `"fullscreen": true` Run in borderless fullscreen mode.
+  * `"mouse_sensitivity": 100` Set mouse sensitivity (100 = normal speed).
+  * `"movement_keys": "wasd"` Choose other movement keys (up, left, down, right). Arrow keys always work regardless of this setting.

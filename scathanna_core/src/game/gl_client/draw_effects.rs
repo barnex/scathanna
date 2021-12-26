@@ -85,7 +85,7 @@ pub fn draw_particle_beam_effect(engine: &Engine, vao: &VertexArray, start: vec3
 
 	engine.set_cull_face(false);
 	let color = WHITE;
-	let alpha = 0.8;
+	let alpha = 1.0;
 	engine.shaders().use_particles(color, alpha, gravity, time, &mat);
 
 	// pick the number of triangles to match the desired beam length.
@@ -102,7 +102,7 @@ pub fn draw_particle_explosion(engine: &Engine, vao: &VertexArray, pos: vec3, co
 	let location_mat = translation_matrix(pos);
 
 	engine.set_cull_face(false);
-	let alpha = 0.8;
+	let alpha = 1.0;
 	engine.shaders().use_particles(color, alpha, gravity, time, &location_mat);
 	engine.draw_triangles(vao);
 }

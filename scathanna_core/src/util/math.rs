@@ -19,6 +19,7 @@ pub fn square<T: Mul + Copy>(x: T) -> T::Output {
 }
 
 /// Clamp a value to lie between min and max (inclusive).
+/// TODO: remove, use std::ord::clamp :)
 #[inline]
 pub fn clamp<T>(v: T, min: T, max: T) -> T
 where

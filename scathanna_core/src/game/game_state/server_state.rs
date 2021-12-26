@@ -129,7 +129,7 @@ impl ServerState {
 
 		let probe = player.position() - 0.2 * vec3::EY;
 		if self.world.map.voxels.at(probe.to_ivec()) == VoxelType::LAVA {
-			push_effect(resp, Effect::particle_explosion(player.position(), RED));
+			push_effect(resp, Effect::particle_explosion(player.camera().position, RED));
 			resp.push(log(format!("{} went swimming in hot lava", &player.name)));
 			resp.push(Envelope {
 				to: Addressee::Just(player_id),

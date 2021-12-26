@@ -1322,7 +1322,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "scathanna_client"
+name = "scathanna"
 version = "1.0.0"
 dependencies = [
  "any_result",

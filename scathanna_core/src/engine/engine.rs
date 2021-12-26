@@ -23,7 +23,10 @@ pub struct Engine {
 	draw_calls: Counter,
 	vertices_drawn: Counter,
 	last_perf: Cell<Instant>,
+	mean_fps: Cell<f32>,
 }
+
+const DBG_STATS: bool = false;
 
 impl Engine {
 	pub fn new() -> Self {
@@ -44,6 +47,7 @@ impl Engine {
 			camera_dir: default(),
 			camera_pos: default(),
 			last_perf: Cell::new(Instant::now()),
+			mean_fps: Cell::new(0.0),
 		}
 	}
 
@@ -454,7 +458,19 @@ impl Engine {
 impl Engine {
 	pub fn draw_perf_stats(&self) {
 		let last_perf = self.last_perf.replace(Instant::now());
-		self.print_top_right(YELLOW, &self.prev_frame_stats(last_perf.elapsed()))
+		if DBG_STATS {
+			self.print_top_right(YELLOW, &self.prev_frame_stats(last_perf.elapsed()))
+		} else {
+			self.print_top_right(YELLOW, &self.fps_stats(last_perf.elapsed()))
+		}
+	}
+
+	fn fps_stats(&self, since_last_frame: Duration) -> String {
+		let fps = 1.0 / (since_last_frame.as_secs_f32());
+		// average FPS using exponential smoothing.
+		let mean_fps = 0.95 * self.mean_fps.get() + 0.05 * fps;
+		self.mean_fps.set(mean_fps);
+		format!("{:4.1} FPS", self.mean_fps.get())
 	}
 
 	fn prev_frame_stats(&self, since_last_frame: Duration) -> String {

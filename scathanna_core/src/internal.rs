@@ -18,6 +18,7 @@ pub use rand::{prelude::StdRng, Rng, SeedableRng};
 
 pub use crate::apply::Apply;
 
+pub use super::config::*;
 pub use super::engine::*;
 pub use super::event_handler::*;
 pub use super::game::*;
