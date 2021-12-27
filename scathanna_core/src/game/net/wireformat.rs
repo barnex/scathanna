@@ -1,24 +1,32 @@
 use super::internal::*;
 
-pub fn serialize<T>(msg: &T) -> Bytes
-where
-	T: Serialize + Send + 'static,
-{
-	Bytes::new(bincode::serialize(msg).unwrap())
-}
+const MAGIC: u64 = 0xff53434154480001;
 
-pub fn serialize_into<W, T>(w: &mut W, msg: &T) -> std::result::Result<(), Box<bincode::ErrorKind>>
+//pub fn serialize<T>(msg: &T) -> Bytes
+//where
+//	T: Serialize + Send + 'static,
+//{
+//	Bytes::new(bincode::serialize(msg).unwrap())
+//}
+
+pub fn serialize_into<W, T>(mut w: W, msg: &T) -> Result<()>
 where
 	T: Serialize + Send + 'static,
 	W: Write,
 {
-	bincode::serialize_into(w, msg)
+	bincode::serialize_into(&mut w, &MAGIC)?;
+	bincode::serialize_into(&mut w, msg)?;
+	Ok(())
 }
 
-pub fn deserialize_from<R, T>(r: &mut R) -> std::result::Result<T, Box<bincode::ErrorKind>>
+pub fn deserialize_from<R, T>(mut r: R) -> Result<T>
 where
 	T: DeserializeOwned + Send + 'static,
 	R: Read,
 {
-	bincode::deserialize_from(r)
+	let magic: u64 = bincode::deserialize_from(&mut r)?;
+	if magic != MAGIC {
+		return err(format!("server-client version mismatch: want {:x}, got {:x}", MAGIC, magic));
+	}
+	Ok(bincode::deserialize_from(&mut r)?)
 }
