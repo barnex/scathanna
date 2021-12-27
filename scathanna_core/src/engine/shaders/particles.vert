@@ -5,7 +5,7 @@
                     - 1/2 * gravity * time^2
 */
 
-#version 300 es
+#version 410 core
 
 layout(location = 0) in vec3 v_pos;  // vertex position at time=0;
 layout(location = 2) in vec2 v_tex;  // vertex texture coordiantes

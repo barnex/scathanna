@@ -184,6 +184,7 @@ fn init_gl_window(args: &Config) -> (Window, EventLoop) {
 		.with_fullscreen(fullscreen)
 		.with_resizable(args.window_resizable);
 	let gl_window = glutin::ContextBuilder::new() //
+		.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (4, 1)))
 		.with_vsync(args.vsync)
 		.with_multisampling(args.msaa)
 		.build_windowed(window, &event_loop)
