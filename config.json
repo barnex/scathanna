@@ -1,8 +1,8 @@
 {
-	"server": "127.0.0.1:3344",
-	"name": "Nameless Frog",
+	"server": "34.76.202.148:80",
+	"name": "Linny",
 	"avatar": "frog",
-	"movement_keys": "wasd",
+	"movement_keys": "esdf",
 	"mouse_sensitivity": 100,
 	"window_width": 1024,
 	"window_height": 768,

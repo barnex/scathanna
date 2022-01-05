@@ -2,7 +2,7 @@
 
 A 3D multiplayer shooter.
 
-![fig](shots/010-poster.jpg)
+![fig](shots/scathanna_v1.webp)
 
 ## Quickstart
 
