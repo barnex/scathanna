@@ -2,7 +2,7 @@
 
 A 3D multiplayer shooter.
 
-![fig](shots/010-poster.jpg)
+![fig](shots/video.webp)
 
 ## Quickstart
 
@@ -70,3 +70,10 @@ The most useful options are:
   * `"vsync": false` Use this on disable vertical sync on slow hardware if your FPS counter runs below 60 FPS.
   * `"msaa":4` Set anti-aliasing quality (0,1,2,4,8,...). Useful on slow hardware.
   * `"fullscreen": true` Run in borderless fullscreen mode.
+
+
+# Status
+
+This is a small personal hobby project. I may not have much time to work on issues or pull requests.
+
+![fig](shots/010-poster.jpg)
