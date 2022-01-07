@@ -1,13 +1,6 @@
 use super::internal::*;
 
-const MAGIC: u64 = 0xff53434154480001;
-
-//pub fn serialize<T>(msg: &T) -> Bytes
-//where
-//	T: Serialize + Send + 'static,
-//{
-//	Bytes::new(bincode::serialize(msg).unwrap())
-//}
+const MAGIC: u64 = 0xff53434154480002;
 
 pub fn serialize_into<W, T>(mut w: W, msg: &T) -> Result<()>
 where

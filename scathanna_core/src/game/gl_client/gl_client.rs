@@ -8,7 +8,7 @@ use super::internal::*;
 /// (see binary scathanna_gl, subcommands `play`, `client`)
 pub struct GLClient {
 	// High-level access to OpenGL functionality.
-	engine: Engine,
+	engine: Rc<Engine>,
 
 	// Timekeeping. TODO: does this belong in GameState?
 	last_tick: Instant,
@@ -24,11 +24,9 @@ pub struct GLClient {
 	// GPU state needed to render the world.
 	//   - changes on every map reload:
 	voxel_models: VoxelModels,
+
 	//   - immutable forever:
-	player_models: PlayerModels,
-	laserbeam_model: Model,
-	particle_explosion_vao: VertexArray,
-	particle_beam_vao: VertexArray,
+	model_pack: ModelPack,
 }
 
 pub const DBG_GEOMETRY: bool = false;
@@ -37,15 +35,9 @@ const ENABLE_BORDERS: bool = false;
 impl GLClient {
 	/// Construct a GLClient that renders and controls a GameState through Player `ID`.
 	/// Loads the needed textures and models from local disk.
-	pub fn new(world: World, player_id: ID) -> Result<Self> {
-		let mut engine = Engine::new();
-
+	pub fn new(engine: Rc<Engine>, world: World, player_id: ID) -> Result<Self> {
 		let dir = map_directory(&world.map.name);
-		let voxel_models = VoxelModels::load(&mut engine, &world.map.voxels, &dir, ENABLE_BORDERS)?;
-		let laserbeam_model = Model::new(engine.wavefront_obj("laserbeam")?, Material::FlatTexture(engine.texture("laserbeam", RED))).double_sided();
-		let particle_explosion_vao = particle_explosion_vao(&mut engine, 800);
-		let particle_beam_vao = particle_beam_vao(&mut engine);
-		let player_models = PlayerModels::new(&mut engine)?;
+		let voxel_models = VoxelModels::load(&engine, &world.map.voxels, &dir, ENABLE_BORDERS)?;
 
 		Ok(Self {
 			last_tick: Instant::now(),
@@ -53,12 +45,8 @@ impl GLClient {
 			mouse_sens: 0.001, // TODO
 
 			state: ClientState::new(player_id, world),
-			player_models,
-			laserbeam_model,
-			particle_explosion_vao,
-			particle_beam_vao,
 			voxel_models,
-
+			model_pack: ModelPack::new(engine.clone())?,
 			engine,
 		})
 	}
@@ -78,31 +66,49 @@ impl GLClient {
 	// __________________________________________________________________________________ rendering
 
 	/// Handle draw request.
-	pub fn draw(&mut self, width: u32, height: u32) {
+	pub fn draw(&self, width: u32, height: u32) {
 		let camera = &self.state.local_player().camera();
 		self.engine.set_camera((width, height), camera);
 		self.engine.clear(0.8, 0.8, 1.0);
-		self.voxel_models.draw(&mut self.engine, camera);
-		self.draw_players();
-		self.draw_effects();
+		self.voxel_models.draw(&self.engine, camera);
+		self.draw_players(camera);
+		self.draw_entities(camera);
+		self.draw_effects(camera);
 		self.engine.draw_crosshair();
-		draw_hud(&self.engine, &self.state.local_player(), &self.state.hud());
+		self.state.hud().draw(&self.engine, &self.state.local_player());
 	}
 
-	fn draw_effects(&self) {
-		for e in &self.state.world().effects {
-			self.draw_effect(e)
+	fn draw_entities(&self, camera: &Camera) {
+		for (_, entity) in &self.state.world().entities {
+			if camera.can_see(entity.position) {
+				let model = self.model_pack.entity_model(entity.kind);
+				self.engine.draw_model_at(&model, entity.position);
+			}
 		}
 	}
 
-	fn draw_effect(&self, e: &Effect) {
+	fn draw_effects(&self, camera: &Camera) {
+		for e in &self.state.world().effects {
+			self.draw_effect(e, camera)
+		}
+	}
+
+	fn draw_effect(&self, e: &Effect, camera: &Camera) {
 		use EffectType::*;
 		match e.typ {
 			SimpleLine { start, end } => self.draw_simple_line_effect(start, end),
-			LaserBeam { start, orientation, len } => self.draw_laserbeam_effect(start, orientation, len, e.ttl),
-			ParticleExplosion { pos, color } => self.draw_particles_effect(pos, color, e.ttl),
-			ParticleBeam { start, orientation, len } => self.draw_particle_beam_effect(start, orientation, len, e.ttl),
-			Respawn { pos } => self.draw_respawn_effect(pos, e.ttl),
+			LaserBeam { start, orientation, len } => self.model_pack.draw_laserbeam_effect(start, orientation, len, e.ttl),
+			ParticleBeam { start, orientation, len, color_filter } => self.model_pack.draw_particle_beam_effect(start, orientation, len, color_filter, e.ttl),
+			ParticleExplosion { pos, color } => {
+				if camera.can_see(pos) {
+					self.model_pack.draw_particles_effect(pos, color, e.ttl)
+				}
+			}
+			Respawn { pos } => {
+				if camera.can_see(pos) {
+					self.model_pack.draw_respawn_effect(pos, e.ttl)
+				}
+			}
 		}
 	}
 
@@ -110,64 +116,37 @@ impl GLClient {
 		self.engine.draw_line(RED, 4.0, start, end)
 	}
 
-	fn draw_respawn_effect(&self, pos: vec3, ttl: f32) {
-		let time = RESPAWN_TTL - ttl;
-		let gravity = -30.0;
-
-		let location_mat = translation_matrix(pos);
-
-		self.engine.set_cull_face(false);
-		let color = YELLOW;
-		let alpha = 0.5;
-		self.engine.shaders().use_particles(color, alpha, gravity, time, &location_mat);
-		self.engine.draw_triangles(&self.particle_explosion_vao);
-	}
-
-	fn draw_laserbeam_effect(&self, start: vec3, orientation: Orientation, len: f32, _ttl: f32) {
-		//let t = (LASERBEAM_TTL - ttl) / LASERBEAM_TTL;
-		//let roll_mat = yaw_matrix(8.0 * t);
-		let pitch_mat = pitch_matrix(-90.0 * DEG - orientation.pitch);
-		let yaw_mat = yaw_matrix(-orientation.yaw);
-		let width = 2.0;
-		let scale_mat = mat4::from([
-			[width, 0.0, 0.0, 0.0], //
-			[0.0, len, 0.0, 0.0],
-			[0.0, 0.0, width, 0.0],
-			[0.0, 0.0, 0.0, 1.0],
-		]);
-		let location_mat = translation_matrix(start);
-
-		let mat = location_mat * yaw_mat * pitch_mat * scale_mat;
-		self.engine.draw_model_with(&self.laserbeam_model, &mat);
-	}
-
-	fn draw_particles_effect(&self, pos: vec3, color: vec3, ttl: f32) {
-		draw_particle_explosion(&self.engine, &self.particle_explosion_vao, pos, color, ttl)
-	}
-
-	fn draw_particle_beam_effect(&self, start: vec3, orientation: Orientation, len: f32, ttl: f32) {
-		draw_particle_beam_effect(&self.engine, &self.particle_beam_vao, start, orientation, len, ttl)
-	}
-
-	fn draw_players(&self) {
-		let camera = self.state.local_player().camera();
-
-		for (_, player) in &self.state.world().players {
-			if player.spawned {
+	fn draw_players(&self, camera: &Camera) {
+		for (_, player) in self.state.world().players.iter() {
+			if !player.spawned {
 				// don't draw players before they spawn
-
-				let model = self.player_models.get(player.avatar_id);
-				if player.id == self.state.player_id() {
-					model.draw_1st_person(&self.engine, player);
-					if DBG_GEOMETRY {
-						self.draw_line_of_fire(player);
-					}
-				} else {
-					if camera.can_see(player.position()) {
-						model.draw_3rd_person(&self.engine, player)
-					}
+				continue;
+			}
+			if player.id == self.state.player_id() {
+				self.draw_player_1st_person(player);
+			} else {
+				if camera.can_see(player.position()) {
+					self.draw_player_3d_person(player)
 				}
 			}
+		}
+	}
+
+	fn draw_player_1st_person(&self, player: &Player) {
+		let model = self.model_pack.player_model(player.avatar_id);
+		model.draw_1st_person(&self.engine, player);
+		if DBG_GEOMETRY {
+			self.draw_line_of_fire(player);
+		}
+	}
+
+	fn draw_player_3d_person(&self, player: &Player) {
+		let model = self.model_pack.player_model(player.avatar_id);
+		model.draw_3rd_person(&self.engine, player);
+		if let Some(hat) = player.powerup {
+			//self.draw_hat(player, hat)
+			let hat = self.model_pack.entity_model(hat);
+			model.draw_hat(&self.engine, player, hat)
 		}
 	}
 

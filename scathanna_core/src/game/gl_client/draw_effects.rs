@@ -5,13 +5,13 @@ use super::internal::*;
 // A VertexArray containing a "particle explosion" consisting of `n` triangles
 // with random orientations, and random velocities pointing away from the origin.
 // To be rendered with `shaders::Particles`.
-pub fn particle_explosion_vao(engine: &mut Engine, n: usize) -> VertexArray {
+pub fn particle_explosion_vao(engine: &Engine, n: usize) -> VertexArray {
 	let pos = |_i| vec3(0.0, 0.0, 0.0);
 	let vel = |_i| 15.0;
 	triangle_particles_vao(engine, n, pos, vel)
 }
 
-pub fn particle_beam_vao(engine: &mut Engine) -> VertexArray {
+pub fn particle_beam_vao(engine: &Engine) -> VertexArray {
 	let max_dist = 500;
 	let n = PARTICLE_BEAM_DENSITY * max_dist;
 	let pos = |i| {
@@ -22,7 +22,7 @@ pub fn particle_beam_vao(engine: &mut Engine) -> VertexArray {
 	triangle_particles_vao(engine, n, pos, vel)
 }
 
-fn triangle_particles_vao(_engine: &mut Engine, n: usize, pos: impl Fn(usize) -> vec3, vel: impl Fn(usize) -> f32) -> VertexArray {
+fn triangle_particles_vao(_engine: &Engine, n: usize, pos: impl Fn(usize) -> vec3, vel: impl Fn(usize) -> f32) -> VertexArray {
 	let mut positions = Vec::new();
 	let mut tex_coords = Vec::new();
 	let mut colors = Vec::new();
@@ -74,7 +74,7 @@ const SIN_60: f32 = 0.86602540378;
 /// Number of particles per unit of particle beam length.
 const PARTICLE_BEAM_DENSITY: usize = 2;
 
-pub fn draw_particle_beam_effect(engine: &Engine, vao: &VertexArray, start: vec3, orientation: Orientation, len: f32, ttl: f32) {
+pub fn draw_particle_beam_effect(engine: &Engine, vao: &VertexArray, start: vec3, orientation: Orientation, len: f32, color_filter: vec3, ttl: f32) {
 	let time = PARTICLES_TTL - ttl;
 	let gravity = 20.0;
 
@@ -84,9 +84,8 @@ pub fn draw_particle_beam_effect(engine: &Engine, vao: &VertexArray, start: vec3
 	let mat = location_mat * yaw_mat * pitch_mat;
 
 	engine.set_cull_face(false);
-	let color = WHITE;
 	let alpha = 1.0;
-	engine.shaders().use_particles(color, alpha, gravity, time, &mat);
+	engine.shaders().use_particles(color_filter, alpha, gravity, time, &mat);
 
 	// pick the number of triangles to match the desired beam length.
 	// number of vertices = 3*number of triangles.

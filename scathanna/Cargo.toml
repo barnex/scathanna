@@ -1,6 +1,6 @@
 [package]
 name = "scathanna"
-version = "1.0.0"
+version = "2.0.0"
 authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
 edition = "2021"
 
@@ -9,7 +9,7 @@ any_result = {path = "../libs/any_result"}
 gl = "0.14"
 gl_safe = {path = "../libs/gl_safe"}
 vector = {path = "../libs/vector"}
-glutin = "0.26"
+glutin = "0.28"
 scathanna_core = {path = "../scathanna_core"}
 structopt = "0.3"
 

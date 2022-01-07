@@ -4,9 +4,7 @@ use gl_safe::*;
 const MIPMAP_LEVELS: u32 = 6;
 
 pub struct Engine {
-	viewport: (u32, u32),
-	camera_pos: vec3,
-	camera_dir: vec3,
+	viewport: Cell<(u32, u32)>,
 	shaders: Shaders,
 
 	//view_distance: f32,
@@ -26,7 +24,7 @@ pub struct Engine {
 	mean_fps: Cell<f32>,
 }
 
-const DBG_STATS: bool = false;
+const DBG_STATS: bool = true;
 
 impl Engine {
 	pub fn new() -> Self {
@@ -35,7 +33,7 @@ impl Engine {
 
 		Self {
 			shaders: Shaders::new(),
-			viewport: (0, 0),
+			viewport: Cell::new((0, 0)),
 			tex_cache: default(),
 			obj_cache: default(),
 			sun_direction: vec3(1.0, 2.0, 0.5).normalized(),
@@ -44,8 +42,6 @@ impl Engine {
 			texture_binds: Counter::new(),
 			draw_calls: Counter::new(),
 			vertices_drawn: Counter::new(),
-			camera_dir: default(),
-			camera_pos: default(),
 			last_perf: Cell::new(Instant::now()),
 			mean_fps: Cell::new(0.0),
 		}
@@ -78,7 +74,8 @@ impl Engine {
 
 	/// Draw text in the bottom-left corner.
 	pub fn print_bottom_left(&self, color: vec3, text: &str) {
-		let pos = vec2(-0.5, -0.5 * self.viewport_aspect() + Self::FONT_VSIZE);
+		let h = Self::text_height(text) as f32 * Self::FONT_VSIZE;
+		let pos = vec2(-0.5, -0.5 * self.viewport_aspect() + h);
 		self.draw_text(pos, color, text)
 	}
 
@@ -94,7 +91,13 @@ impl Engine {
 	/// a bit above the crosshair.
 	pub fn print_center(&self, color: vec3, text: &str) {
 		let w = Self::text_width(text) as f32 * Self::FONT_HSIZE / 2.0;
-		let pos = vec2(-w, 0.125 * self.viewport_aspect() + Self::FONT_VSIZE);
+		let pos = vec2(-w, 0.2 * self.viewport_aspect() + Self::FONT_VSIZE);
+		self.draw_text(pos, color, text)
+	}
+
+	pub fn print_top_center(&self, color: vec3, text: &str) {
+		let w = Self::text_width(text) as f32 * Self::FONT_HSIZE / 2.0;
+		let pos = vec2(-w, 0.5 * self.viewport_aspect());
 		self.draw_text(pos, color, text)
 	}
 
@@ -128,7 +131,11 @@ impl Engine {
 
 	// viewport height/width ratio.
 	fn viewport_aspect(&self) -> f32 {
-		self.viewport.1 as f32 / self.viewport.0 as f32
+		self.viewport().1 as f32 / self.viewport().0 as f32
+	}
+
+	fn viewport(&self) -> (u32, u32) {
+		self.viewport.get()
 	}
 
 	// find a character position in the ascii font texture.
@@ -180,11 +187,13 @@ impl Engine {
 
 // Rendering
 impl Engine {
-	pub fn set_camera(&mut self, viewport: (u32, u32), camera: &Camera) {
+	pub fn set_camera(&self, viewport: (u32, u32), camera: &Camera) {
 		glViewport(0, 0, viewport.0 as i32, viewport.1 as i32);
-		self.viewport = viewport;
-		self.camera_pos = camera.position;
-		self.camera_dir = camera.orientation.look_dir();
+
+		self.viewport.set(viewport);
+		//self.camera_pos = camera.position;
+		//self.camera_dir = camera.orientation.look_dir();
+
 		self.shaders.set_camera(viewport, camera)
 	}
 
@@ -202,7 +211,7 @@ impl Engine {
 	}
 
 	/// Draw model without any transforms.
-	pub fn draw_model(&mut self, model: &Model) {
+	pub fn draw_model(&self, model: &Model) {
 		self.draw_model_with(model, &mat4::UNIT)
 	}
 
@@ -430,19 +439,25 @@ impl Engine {
 	/// (because, e.g. several avatar models share the same gun, feet, etc,
 	/// and it would be cumbersome to deduplicate those manually).
 	pub fn wavefront_obj(&self, base: &str) -> Result<Rc<VertexArray>> {
+		self.wavefront_obj_scaled(base, 1.0)
+	}
+
+	// TODO: this assumes only one scaled instance, cache collides otherwise
+	pub fn wavefront_obj_scaled(&self, base: &str, scale: f32) -> Result<Rc<VertexArray>> {
 		if !self.obj_cache.borrow().contains_key(base) {
-			self.obj_cache.borrow_mut().insert(base.to_owned(), Rc::new(self.wavefront_obj_uncached(base)?));
+			self.obj_cache.borrow_mut().insert(base.to_owned(), Rc::new(self.wavefront_obj_uncached(base, scale)?));
 		}
 		Ok(Rc::clone(self.obj_cache.borrow().get(base).unwrap()))
 	}
 
-	fn wavefront_obj_uncached(&self, base: &str) -> Result<VertexArray> {
+	// TODO: transform func instead of scale
+	fn wavefront_obj_uncached(&self, base: &str, scale: f32) -> Result<VertexArray> {
 		let obj_file = abs_path(&Path::new(OBJ_PATH).join(base).with_extension("obj"));
 		println!("loading {}", obj_file.to_string_lossy());
 		let objs = wavefrontobj::parse(open(&obj_file)?)?;
 
 		Ok(VertexArray::create() //
-			.with_vec3_attrib(Shaders::ATTRIB_POSITIONS, &objs.vertex_positions())
+			.with_vec3_attrib(Shaders::ATTRIB_POSITIONS, &objs.iter_vertex_positions().map(|v| v * scale).collect::<Vec<_>>())
 			.with_vec2_attrib(Shaders::ATTRIB_TEXCOORDS, &Self::flip_texcoords_y(objs.texture_cordinates()))
 			.with_vec3_attrib(Shaders::ATTRIB_NORMALS, &objs.vertex_normals()))
 	}

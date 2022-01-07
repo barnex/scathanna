@@ -1,5 +1,6 @@
 use any_result::*;
 use scathanna_core::game::net::*;
+use scathanna_core::game::*;
 use structopt::*;
 
 fn main() {

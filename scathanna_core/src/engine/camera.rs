@@ -28,7 +28,7 @@ impl Camera {
 	pub fn can_see(&self, pos: vec3) -> bool {
 		// TODO: this is a crude approximation that yields many false positives,
 		// use precise frustum instead.
-		(pos - self.position).dot(self.orientation.look_dir()) > 0.0
+		(pos - self.position).dot(self.orientation.look_dir()) >= 0.0
 	}
 }
 

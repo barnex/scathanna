@@ -10,7 +10,11 @@ pub struct ObjSet {
 
 impl ObjSet {
 	pub fn vertex_positions(&self) -> Vec<vec3> {
-		self.objects.iter().map(Object::vertex_positions).flatten().collect()
+		self.iter_vertex_positions().collect()
+	}
+
+	pub fn iter_vertex_positions(&self) -> impl Iterator<Item = vec3> + '_ {
+		self.objects.iter().map(Object::vertex_positions).flatten()
 	}
 
 	pub fn texture_cordinates(&self) -> Vec<vec2> {

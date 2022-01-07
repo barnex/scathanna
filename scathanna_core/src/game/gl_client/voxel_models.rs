@@ -5,7 +5,7 @@ pub struct VoxelModels {
 }
 
 impl VoxelModels {
-	pub fn load(engine: &mut Engine, voxels: &Voxels, dir: &Path, enable_borders: bool) -> Result<Self> {
+	pub fn load(engine: &Engine, voxels: &Voxels, dir: &Path, enable_borders: bool) -> Result<Self> {
 		let mut cell_models = HashMap::default();
 
 		for cell_pos in voxels.iter_cell_positions() {
@@ -25,7 +25,7 @@ impl VoxelModels {
 		Ok(Self { cell_models })
 	}
 
-	pub fn draw(&self, engine: &mut Engine, camera: &Camera) {
+	pub fn draw(&self, engine: &Engine, camera: &Camera) {
 		engine.set_line_width(2.0);
 		let visible_range = VoxelWorld::visible_range(camera);
 		for pos in visible_range.iter_by(Voxels::CELL_SIZE) {

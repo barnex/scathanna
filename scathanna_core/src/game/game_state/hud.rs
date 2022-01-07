@@ -3,23 +3,32 @@ use super::internal::*;
 /// Heads-up display (score, log messages, ...).
 #[derive(Default)]
 pub struct HUD {
+	topleft: String,
+
 	message: String,
 	message_ttl: f32,
+
 	log_msg: Vec<String>,
 	log_ttl: f32,
 }
 
 // Time-to-live for "you killed..." message shown above crosshair.
 const MSG_TTL: f32 = 4.0;
-const LOG_TTL: f32 = 2.0;
+const LOG_TTL: f32 = 4.0;
 
 // Max log queue length.
 const MAX_LOG_MSG: usize = 8;
 
-// Print FPS/Draw calls/...
-const DBG_STATS: bool = true;
-
 impl HUD {
+	pub fn update(&mut self, upd: HUDUpdate) {
+		use HUDUpdate::*;
+		match upd {
+			Message(message) => self.show(message),
+			Log(message) => self.log(message),
+			Score(message) => self.topleft = message,
+		}
+	}
+
 	pub fn show(&mut self, message: String) {
 		self.message = message;
 		self.message_ttl = MSG_TTL;
@@ -46,21 +55,28 @@ impl HUD {
 			self.log_ttl = LOG_TTL;
 		}
 	}
-}
 
-pub fn draw_hud(engine: &Engine, player: &Player, hud: &HUD) {
-	engine.print_top_left(WHITE, &hud.log_msg.join("\n"));
+	pub fn draw(&self, engine: &Engine, player: &Player) {
+		engine.print_bottom_left(GREY, &self.log_msg.join("\n"));
 
-	match hud.message.as_str() {
-		"" => (),
-		msg => engine.print_center(WHITE, msg),
-	}
+		engine.print_top_left(WHITE, &self.topleft);
 
-	if !player.spawned {
-		engine.print_center(WHITE, "\nClick to respawn")
-	}
+		match self.message.as_str() {
+			"" => (),
+			msg => engine.print_center(WHITE, msg),
+		}
 
-	if DBG_STATS {
+		if !player.spawned {
+			engine.print_top_center(WHITE, "Click to respawn")
+		}
+
 		engine.draw_perf_stats();
 	}
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum HUDUpdate {
+	Message(String),
+	Log(String),
+	Score(String),
 }

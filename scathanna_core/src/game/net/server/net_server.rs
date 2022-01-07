@@ -35,6 +35,7 @@ enum ServerEvent {
 	Conn(TcpStream),                // A client has connected
 	Drop(ID),                       // A client has dropped
 	ClientMessage((ID, ClientMsg)), // Client sent a message
+	Tick(f32),                      // Internal clock tick
 }
 
 impl NetServer {
@@ -43,12 +44,13 @@ impl NetServer {
 	pub fn listen_and_serve(opts: ServerOpts) -> Result<()> {
 		let (clients_send, server_recv) = channel::<ServerEvent>();
 		Self::spawn_listen_loop(&opts.addr, clients_send.clone())?;
+		Self::spawn_ticker(clients_send.clone());
 
 		let mut server = Self {
 			send_events: clients_send,
 			recv_events: server_recv,
 			clients: HashMap::default(),
-			state: ServerState::new(opts.maplist)?,
+			state: ServerState::new(opts)?,
 		};
 
 		server.serve_loop()
@@ -69,6 +71,7 @@ impl NetServer {
 				Conn(netpipe) => self.handle_conn_client(netpipe),
 				Drop(id) => self.handle_drop_client(id),
 				ClientMessage((id, msg)) => self.handle_client_msg(id, msg),
+				Tick(dt) => self.handle_tick(dt),
 			}
 		}
 	}
@@ -86,7 +89,7 @@ impl NetServer {
 		let join_msg: JoinMsg = wireformat::deserialize_from(&mut tcp_stream)?;
 
 		// add player to server game state.
-		let (player_id, resp) = self.state.join_new_player(join_msg);
+		let player_id = self.state.join_new_player(join_msg);
 
 		// send "accepted" message with map info and player ID
 		//serialize_into(&mut BufWriter::new(&mut tcp_stream), &accepted)?;
@@ -99,7 +102,7 @@ impl NetServer {
 		self.spawn_recv_loop(tcp_stream, player_id);
 
 		// announce the new player to others.
-		self.send(&resp);
+		self.flush_pending_diffs();
 
 		Ok(())
 	}
@@ -107,46 +110,54 @@ impl NetServer {
 	// Handle a dropped connection event.
 	fn handle_drop_client(&mut self, player_id: ID) {
 		self.clients.remove(&player_id);
-		let mut resp = ServerMsgs::new();
-		self.state.handle_drop_player(&mut resp, player_id);
-		self.send(&resp);
-		println!("dropped client {}, have {} clients left", player_id, self.clients.len());
+		self.state.handle_drop_player(player_id);
+		println!("dropped client #{}, {} left", player_id, self.clients.len());
+		self.flush_pending_diffs();
 	}
 
 	// Handle an incoming message from a client.
 	fn handle_client_msg(&mut self, player_id: ID, msg: ClientMsg) {
-		let resp = self.state.handle_client_msg(player_id, msg);
-		self.send(&resp)
+		self.state.handle_client_msg(player_id, msg);
+		self.flush_pending_diffs();
+	}
+
+	fn handle_tick(&mut self, dt: f32) {
+		self.state.handle_tick(dt);
+		self.flush_pending_diffs();
 	}
 
 	//____________________________________________________________ communication protocol
 
-	// send a message to all players matching `Addressee`.
-	fn send(&mut self, msgs: &ServerMsgs) {
-		for msg in msgs {
-			for client_id in self.addressees(msg.to) {
+	fn flush_pending_diffs(&mut self) {
+		let client_ids = self.clients.keys().copied().collect::<SmallVec<_>>();
+
+		let diffs = mem::take(&mut self.state.pending_diffs); // sending to disconnected client caused drop which might lead to new diffs.
+		for msg in diffs {
+			for client_id in Self::addressees(&client_ids, msg.to) {
 				self.send_to(client_id, msg.msg.clone())
 			}
 		}
 	}
 
-	// send a message to just one player
-	fn send_to(&mut self, player_id: ID, msg: ServerMsg) {
-		match self.clients.get_mut(&player_id).unwrap().send(msg) {
-			Err(e) => {
-				println!("{}", e);
-				self.handle_drop_client(player_id)
-			}
-			Ok(()) => (),
+	// expand Addressee (Just/Not/All) into list of matching client IDs.
+	fn addressees(clients: &[ID], a: Addressee) -> SmallVec<ID> {
+		match a {
+			Addressee::Just(id) => smallvec![id],
+			Addressee::Not(id) => clients.into_iter().copied().filter(|&i| i != id).collect(),
+			Addressee::All => clients.iter().copied().collect(),
 		}
 	}
 
-	// expand Addressee (Just/Not/All) into list of matching client IDs.
-	fn addressees(&self, a: Addressee) -> SmallVec<ID> {
-		match a {
-			Addressee::Just(id) => smallvec![id],
-			Addressee::Not(id) => self.clients.keys().copied().filter(|&i| i != id).collect(),
-			Addressee::All => self.clients.keys().copied().collect(),
+	// send a message to just one player
+	fn send_to(&mut self, player_id: ID, msg: ServerMsg) {
+		if let Some(client) = self.clients.get_mut(&player_id) {
+			match client.send(msg) {
+				Err(e) => {
+					println!("{}", e);
+					self.handle_drop_client(player_id)
+				}
+				Ok(()) => (),
+			}
 		}
 	}
 
@@ -189,5 +200,18 @@ impl NetServer {
 			}
 		});
 		Ok(())
+	}
+
+	fn spawn_ticker(clients_send: Sender<ServerEvent>) {
+		thread::spawn(move || {
+			let period = Duration::from_millis(100);
+			let dt = period.as_secs_f32();
+			loop {
+				std::thread::sleep(period);
+				if clients_send.send(ServerEvent::Tick(dt)).is_err() {
+					return; // server quit, so stop worker thread.
+				}
+			}
+		});
 	}
 }

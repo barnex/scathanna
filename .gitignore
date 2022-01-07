@@ -1,0 +1,6 @@
+target
+*/target
+assets*
+*/assets
+out.perf
+perf.data

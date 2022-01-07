@@ -1,4 +1,5 @@
 use super::internal::*;
+use ClientMsg::*;
 
 /// Player data.
 /// Part of the GameState.
@@ -9,9 +10,12 @@ pub struct Player {
 	pub id: ID,        // uniquely identifies player across server and all clients
 	pub name: String,  // nickname
 	pub avatar_id: u8, // determines which avatar model is drawn (gl_client.rs).
+	pub team: Team,
 	pub health: i32,
 	pub spawned: bool, // playing or waiting for respawn?
 	pub next_spawn_point: vec3,
+	pub powerup: Option<EKind>,
+	pub invulnerability_ttl: Option<f32>, // seconds of invulnerability left
 
 	// controlled locally, synced to server:
 	pub skeleton: Skeleton, // fully determines player position
@@ -19,6 +23,7 @@ pub struct Player {
 	// controlled locally, not synced:
 	pub local: LocalState,
 }
+
 
 /// Controlled by the local client, never overwritten by the server.
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -31,28 +36,31 @@ pub struct LocalState {
 /// Key for identifying players
 pub type ID = u32;
 
-pub type Players = HashMap<ID, Player>;
-
 const FEET_ANIM_SPEED: f32 = 12.0;
 const FEET_ANIM_DAMP: f32 = 6.0;
-const GUN_COOLDOWN: f32 = 0.1; // seconds
+const DEFAULT_GUN_COOLDOWN: f32 = 0.7; // seconds
 
 impl Player {
 	pub const HSIZE: f32 = 3.8;
 	pub const VSIZE: f32 = 5.8;
 	pub const CAM_HEIGHT: f32 = 5.4;
-	const WALK_SPEED: f32 = 24.0;
+	pub const WALK_SPEED: f32 = 24.0;
+	const JUMP_SPEED: f32 = 24.0;
 
-	pub fn new(id: ID, position: vec3, orientation: Orientation, name: String, avatar_id: u8) -> Self {
+	pub fn new(id: ID, position: vec3, orientation: Orientation, name: String, avatar_id: u8, team: Team) -> Self {
 		Self {
 			id,
 			name,
 			avatar_id,
-			skeleton: Skeleton::new(position, orientation, Self::HSIZE, Self::VSIZE),
-			local: default(),
 			spawned: false,
 			health: 100,
 			next_spawn_point: position,
+			powerup: None,
+			team,
+			invulnerability_ttl: None,
+
+			skeleton: Skeleton::new(position, orientation, Self::HSIZE, Self::VSIZE),
+			local: default(),
 		}
 	}
 
@@ -66,12 +74,12 @@ impl Player {
 			self.control_shooting(upd, input_state, world, dt);
 		} else {
 			self.set_orientation(input_state);
-			if input_state.is_down(Key::Mouse1) {
+			if input_state.is_pressed(Key::Mouse1) {
 				self.skeleton.position = self.next_spawn_point;
-				upd.push(ClientMsg::ReadyToSpawn);
+				upd.push(ReadyToSpawn);
 			}
 		}
-		upd.push(ClientMsg::MovePlayer(self.skeleton.frame()));
+		upd.push(MovePlayer(self.skeleton.frame()));
 	}
 
 	// __________________ shooting
@@ -85,31 +93,59 @@ impl Player {
 
 		if input_state.is_pressed(Key::Mouse1) {
 			self.shoot(upd, world, dt)
-		}
-		if input_state.is_down(Key::Mouse3) {
+		} else if input_state.is_down(Key::Mouse1) && self.can_shoot_berserk(world) {
 			self.shoot(upd, world, dt)
 		}
 	}
 
-	fn shoot(&mut self, upd: &mut ClientMsgs, world: &World, dt: f32) {
+	fn can_shoot_berserk(&self, world: &World) -> bool {
+		use EKind::*;
+		match self.powerup {
+			Some(BerserkerHelmet) => true,
+			Some(PartyHat) => self.is_on_lava(world),
+			_ => false,
+		}
+	}
+
+	pub fn is_on_lava(&self, world: &World) -> bool {
+		let probe = self.position() - 0.2 * vec3::EY;
+		world.map.voxels.at(probe.to_ivec()) == VoxelType::LAVA
+	}
+
+	fn gun_cooldown(&self, world: &World) -> f32 {
+		use EKind::*;
+		const FAST: f32 = 0.05;
+		match self.powerup {
+			Some(CowboyHat) => FAST,
+			Some(BerserkerHelmet) => FAST,
+			Some(PartyHat) => {
+				if self.is_on_lava(world) {
+					FAST
+				} else {
+					DEFAULT_GUN_COOLDOWN
+				}
+			}
+			_ => DEFAULT_GUN_COOLDOWN,
+		}
+	}
+
+	fn shoot(&mut self, upd: &mut ClientMsgs, world: &World, _dt: f32) {
 		// shooting, so gun will need to cool down before next shot is allowed.
-		self.local.gun_cooldown = GUN_COOLDOWN;
+		self.local.gun_cooldown = self.gun_cooldown(world);
 
 		let line_of_fire = self.line_of_fire(world);
 		let start = line_of_fire.start.to_f32();
 		let end = self.shoot_at(world);
 		let len = (end - start).len();
-		upd.push(particle_beam_effect(start, self.orientation(), len));
+		upd.push(ClientMsg::AddEffect(Effect::particle_beam(start, self.orientation(), len, self.team.color_filter())));
 
-		if let Some((_, Some(id))) = world.intersect_except(self.id, &line_of_fire) {
-			upd.push(ClientMsg::HitPlayer { victim: id });
+		if let Some((_, Some(victim_id))) = world.intersect_except(self.id, &line_of_fire) {
+			upd.push(HitPlayer(victim_id));
 		}
 
 		// effect when shooting lava
 		if world.map.voxels.at(end.to_ivec()) == VoxelType::LAVA {
-			upd.push(ClientMsg::AddEffect {
-				effect: Effect::particle_explosion(end, RED),
-			});
+			upd.push(AddEffect(Effect::particle_explosion(end, RED)));
 		}
 	}
 
@@ -118,14 +154,22 @@ impl Player {
 	fn tick_movement(&mut self, input_state: &InputState, world: &World, dt: f32) {
 		self.set_orientation(input_state);
 		self.tick_walk(input_state, world, dt);
+		self.tick_jump(input_state, world, dt);
 		self.skeleton.tick(world, dt);
 	}
 
 	fn tick_walk(&mut self, input_state: &InputState, world: &World, dt: f32) {
 		let walk_speed = Self::WALK_SPEED * walk_dir(self.orientation().yaw, input_state);
 		self.skeleton.try_walk(dt, world, walk_speed);
+	}
+
+	fn tick_jump(&mut self, input_state: &InputState, world: &World, _dt: f32) {
 		if input_state.is_down(Key::Jump) {
-			self.skeleton.try_jump(world, Self::WALK_SPEED)
+			self.skeleton.try_jump(world, Self::JUMP_SPEED)
+		}
+
+		if self.powerup == Some(EKind::XMasHat) && input_state.is_pressed(Key::Jump) {
+			self.skeleton.unconditional_jump(Self::JUMP_SPEED)
 		}
 	}
 
@@ -166,8 +210,13 @@ impl Player {
 
 	// __________________________________________________________________________________ accessors
 
+	/// Center-bottom position of the bounding box.
 	pub fn position(&self) -> vec3 {
 		self.skeleton.position
+	}
+
+	pub fn center(&self) -> vec3 {
+		self.skeleton.bounds().center()
 	}
 
 	pub fn orientation(&self) -> Orientation {

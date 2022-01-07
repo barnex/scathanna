@@ -35,7 +35,7 @@ impl VoxelWorld {
 		}
 	}
 
-	pub fn load(engine: &mut Engine, dir: &Path) -> Result<Self> {
+	pub fn load(engine: &Engine, dir: &Path) -> Result<Self> {
 		let voxel_file = dir.join(MapData::VOXEL_FILE);
 		let voxels = Voxels::load(voxel_file)?;
 
@@ -102,7 +102,7 @@ impl VoxelWorld {
 	}
 
 	/// Draw voxel world as seen from camera.
-	pub fn draw(&mut self, engine: &mut Engine, camera: &Camera) {
+	pub fn draw(&mut self, engine: &Engine, camera: &Camera) {
 		let visible_range = Self::visible_range(camera); // TODO
 
 		self.receive_models(engine);
@@ -117,7 +117,7 @@ impl VoxelWorld {
 	}
 
 	/// Receive freshly baked models, if any.
-	fn receive_models(&mut self, engine: &mut Engine) {
+	fn receive_models(&mut self, engine: &Engine) {
 		while let Some(vec) = self.bakery.try_recv() {
 			//println!("VoxelWorld: recv {} from bakery", pos);
 			for (pos, buffer) in vec {
@@ -127,7 +127,7 @@ impl VoxelWorld {
 		}
 	}
 
-	pub fn upload_cell_models(engine: &mut Engine, cell_buffer: CellBuffer) -> Vec<Model> {
+	pub fn upload_cell_models(engine: &Engine, cell_buffer: CellBuffer) -> Vec<Model> {
 		let lm_tex = engine.lightmap_from_mem(cell_buffer.lightmap.image());
 
 		// convert faces to models on the GPU.
@@ -173,7 +173,7 @@ impl VoxelWorld {
 	}
 
 	/// Draw using the models that we currently have, possibly outdated.
-	fn draw_current_models(&self, engine: &mut Engine, visible_range: &Cuboid) {
+	fn draw_current_models(&self, engine: &Engine, visible_range: &Cuboid) {
 		engine.set_line_width(1.5);
 		for pos in visible_range.iter_by(Voxels::CELL_SIZE) {
 			if let Some(models) = self.models.get(&pos) {
@@ -198,7 +198,7 @@ impl VoxelWorld {
 }
 
 /// Texture for a voxel type (sand, lava, ...)
-fn voxel_texture(engine: &mut Engine, voxel: VoxelType) -> Rc<Texture> {
+fn voxel_texture(engine: &Engine, voxel: VoxelType) -> Rc<Texture> {
 	match voxel.0 {
 		0 => panic!("requesting texture for empty voxel"),
 		1 => engine.texture("snow", WHITE),             //

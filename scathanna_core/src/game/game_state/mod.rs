@@ -1,23 +1,36 @@
 mod internal;
 
 mod client_state;
+mod commands;
 mod effect;
+mod entity;
+mod gametype;
 mod hud;
 mod map_data;
 mod message;
 mod metadata;
+mod pickup_point;
 mod player;
+mod players;
 mod server_state;
 mod spawn_point;
+mod team;
+mod server_opts;
 mod world;
 
 pub use client_state::*;
 pub use effect::*;
+pub use server_opts::*;
+pub use entity::*;
+pub use gametype::*;
 pub use hud::*;
 pub use map_data::*;
 pub use message::*;
 pub use metadata::*;
+pub use pickup_point::*;
 pub use player::*;
+pub use players::*;
 pub use server_state::*;
 pub use spawn_point::*;
+pub use team::*;
 pub use world::*;

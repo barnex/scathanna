@@ -1,9 +1,9 @@
 pub use super::super::internal::*;
 pub use super::netpipe::*;
 pub use super::wireformat::*;
-pub use super::bytes::*;
 pub use super::*;
 
+pub use std::mem;
 pub use std::net::SocketAddr;
 pub use std::net::TcpListener;
 pub use std::net::TcpStream;

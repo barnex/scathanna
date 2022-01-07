@@ -1,10 +1,6 @@
 use super::internal::*;
 use std::cell::RefCell;
 use std::fs;
-use std::sync::mpsc::channel;
-use std::sync::mpsc::Receiver;
-use std::sync::mpsc::TryRecvError;
-use std::thread;
 
 pub struct EdState {
 	// Input
@@ -13,24 +9,26 @@ pub struct EdState {
 	mouse_sens: f64,
 
 	// World rendering
-	engine: Engine,
+	engine: Rc<Engine>,
 	camera: Camera,
-	voxel_world: VoxelWorld,
+	models: ModelPack,
 
+	voxel_world: VoxelWorld,
 	metadata: Metadata,
+	spawn_point_model: Model,
 
 	log_msg: RefCell<String>,
 
 	// Editing
 	cursor_size: uvec3,
 	current_paint: VoxelType,
-	stdin: Receiver<String>,
+	stdin: StdinPipe,
 	dir: PathBuf,
 }
 
 impl EdState {
 	/// EdState with empty world.
-	fn new(engine: Engine, dir: &Path, voxel_world: VoxelWorld, metadata: Metadata) -> Self {
+	fn new(engine: Rc<Engine>, dir: &Path, voxel_world: VoxelWorld, metadata: Metadata) -> Self {
 		Self {
 			dir: dir.to_owned(),
 			last_tick: Instant::now(),
@@ -41,6 +39,8 @@ impl EdState {
 			metadata,
 
 			voxel_world,
+			models: ModelPack::new(engine.clone()).expect("load model pack"),
+			spawn_point_model: Model::new(engine.wavefront_obj("box").expect("load model"), Material::UniformColor(YELLOW)),
 			engine,
 			cursor_size: uvec3(1, 1, 1),
 			current_paint: VoxelType(1),
@@ -51,19 +51,19 @@ impl EdState {
 
 	/// Mostly empty EdState to start building a new map from.
 	pub fn create_new(dir: &Path) -> Result<Self> {
-		fs::create_dir(dir)?;
+		fs::create_dir_all(dir)?;
 		let mut voxels = Voxels::new();
 		voxels.set_range(&Cuboid::cube(ivec3(0, 0, 0), Voxels::CELL_SIZE), VoxelType(1));
 		let voxel_world = VoxelWorld::new(voxels);
-		let engine = Engine::new();
+		let engine = Rc::new(Engine::new());
 		let metadata = Metadata::new();
 		Ok(Self::new(engine, dir, voxel_world, metadata))
 	}
 
 	/// Load EdState from a `my_map.sc/` directory.
 	pub fn load(dir: &Path) -> Result<Self> {
-		let mut engine = Engine::new();
-		let voxel_world = VoxelWorld::load(&mut engine, dir)?;
+		let engine = Rc::new(Engine::new());
+		let voxel_world = VoxelWorld::load(&engine, dir)?;
 		let metadata = Metadata::load(&dir.join(MapData::METADATA_FILE)).unwrap_or_default();
 		Ok(Self::new(engine, dir, voxel_world, metadata))
 	}
@@ -102,9 +102,11 @@ impl EdState {
 	pub fn draw(&mut self, width: u32, height: u32) {
 		self.engine.set_camera((width, height), &self.camera);
 		self.engine.clear(0.8, 0.8, 1.0);
-		self.voxel_world.draw(&mut self.engine, &self.camera);
+		self.voxel_world.draw(&self.engine, &self.camera);
 		self.engine.print_bottom_left(WHITE, &self.log_msg.borrow());
 		self.engine.draw_crosshair();
+		self.draw_spawn_points();
+		self.draw_pickup_points();
 		self.draw_cursor();
 	}
 
@@ -124,14 +126,9 @@ impl EdState {
 	}
 
 	fn handle_stdin(&mut self) {
-		match self.stdin.try_recv() {
-			Err(TryRecvError::Disconnected) => (),
-			Err(TryRecvError::Empty) => (),
-			Ok(cmd) => {
-				let cmd = cmd.trim();
-				if cmd.len() != 0 {
-					self.handle_command(cmd);
-				}
+		if let Some(cmd) = self.stdin.try_read() {
+			if cmd.len() != 0 {
+				self.handle_command(&cmd);
 			}
 		}
 	}
@@ -139,8 +136,26 @@ impl EdState {
 	fn handle_command(&mut self, cmd: &str) {
 		match cmd {
 			"pos" => println!("cursor position: {}", self.cursor_range().map(|c| c.min).unwrap_or_default()),
+			"spawn" => {
+				if let Some(pos) = self.cursor_position() {
+					self.add_spawn_point(pos)
+				}
+			}
+			"pickup" => {
+				if let Some(pos) = self.cursor_position() {
+					self.add_pickup_point(pos)
+				}
+			}
 			unknown => println!("unknown command: {}", unknown),
 		}
+	}
+
+	fn add_spawn_point(&mut self, pos: ivec3) {
+		self.metadata.spawn_points.push(SpawnPoint { pos });
+	}
+
+	fn add_pickup_point(&mut self, pos: ivec3) {
+		self.metadata.pickup_points.push(PickupPoint { pos, taken: true });
 	}
 
 	fn handle_save(&self) {
@@ -244,15 +259,33 @@ impl EdState {
 	}
 
 	// Draw the outline of a 3D cuboid that we would fill with blocks on click.
-	fn draw_cursor(&mut self) {
+	fn draw_cursor(&self) {
 		self.engine.enable_line_offset();
 		if let Some(range) = self.cursor_range() {
 			self.engine.draw_boundingbox(BoundingBox::new(range.min.to_f32(), range.max.to_f32()))
 		}
 	}
 
+	fn draw_spawn_points(&self) {
+		let model = &self.spawn_point_model;
+		for sp in &self.metadata.spawn_points {
+			self.engine.draw_model_at(&model, sp.position());
+		}
+	}
+
+	fn draw_pickup_points(&self) {
+		let model = self.models.entity_model(EKind::GiftBox { pickup_point_id: None });
+		for pp in &self.metadata.pickup_points {
+			self.engine.draw_model_at(&model, pp.position());
+		}
+	}
+
 	fn cursor_range(&self) -> Option<Cuboid> {
 		self.crosshair_hitpoint(-0.1).map(|hitpoint| self.aligned_cursor_range(hitpoint))
+	}
+
+	fn cursor_position(&self) -> Option<ivec3> {
+		self.cursor_range().map(|c| c.min)
 	}
 
 	fn shoot_block(&mut self, voxel: VoxelType) {
@@ -337,17 +370,4 @@ impl EventHandler for EdState {
 	fn draw(&mut self, width: u32, height: u32) {
 		self.draw(width, height)
 	}
-}
-
-fn pipe_stdin() -> Receiver<String> {
-	let (send, recv) = channel();
-	thread::spawn(move || {
-		let stdin = std::io::stdin();
-		loop {
-			let mut input = String::new();
-			stdin.read_line(&mut input).expect("read from stdin");
-			send.send(input).unwrap();
-		}
-	});
-	recv
 }

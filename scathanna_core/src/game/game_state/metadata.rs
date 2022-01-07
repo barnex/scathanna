@@ -1,13 +1,17 @@
 use super::internal::*;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Metadata {
+	#[serde(default)]
 	pub spawn_points: Vec<SpawnPoint>,
+
+	#[serde(default)]
+	pub pickup_points: Vec<PickupPoint>,
 }
 
 impl Metadata {
 	pub fn new() -> Self {
-		Self { spawn_points: vec![] }
+		Self::default()
 	}
 
 	pub fn save(&self, file: &Path) -> Result<()> {
@@ -18,13 +22,5 @@ impl Metadata {
 		let file = file.as_ref();
 		let r = open(file)?;
 		Ok(serde_json::from_reader(r)?)
-	}
-}
-
-impl Default for Metadata {
-	fn default() -> Self {
-		Self {
-			spawn_points: vec![SpawnPoint { pos: ivec3(0, 0, 0) }],
-		}
 	}
 }

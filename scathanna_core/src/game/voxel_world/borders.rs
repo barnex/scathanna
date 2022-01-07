@@ -2,7 +2,7 @@ use super::internal::*;
 
 /// Wireframe models that may be drawn over the voxels to highlight their edges,
 /// resulting in comic book style graphics. One per cell, indexed by cell position.
-pub fn highlighted_edges(engine: &mut Engine, voxels: &Voxels) -> HashMap<ivec3, Model> {
+pub fn highlighted_edges(engine: &Engine, voxels: &Voxels) -> HashMap<ivec3, Model> {
 	// Cut edges into strands of length 1.
 	// If the same strand (including normal direction) is present twice,
 	// then both instances must come from adjacent faces (i.e. be "inner" edges)
@@ -54,7 +54,7 @@ pub fn highlighted_edges(engine: &mut Engine, voxels: &Voxels) -> HashMap<ivec3,
 	}
 
 	// Strands that meet up head-to-tail can now be combined
-	// (but not across cells ,which have to be renderable independently):
+	// (but not across cells, which have to be renderable independently):
 	//
 	//         +-----------+
 	//        /           /|

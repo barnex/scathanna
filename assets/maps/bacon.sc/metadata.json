@@ -56,5 +56,23 @@
         15
       ]
     }
+  ],
+  "pickup_points": [
+    {
+      "pos": [
+        104,
+        96,
+        1
+      ],
+      "taken": false
+    },
+    {
+      "pos": [
+        26,
+        96,
+        1
+      ],
+      "taken": true
+    }
   ]
 }

@@ -23,6 +23,7 @@ pub type ServerMsgs = Vec<Envelope<ServerMsg>>;
 pub struct JoinMsg {
 	pub name: String, // Player's nickname
 	pub avatar_id: u8,
+	pub team: Team,
 }
 
 /// Subsequent messages sent by Client after the initial JoinMsg.
@@ -35,24 +36,48 @@ pub enum ClientMsg {
 	ReadyToSpawn,
 
 	/// Spawn a visual effect.
-	AddEffect { effect: Effect },
+	AddEffect(Effect),
 
 	/// I have shot player with ID `victim`.
-	HitPlayer { victim: ID },
+	HitPlayer(ID),
+
+	/// Send a CLI command to the server.
+	Command(String),
 }
 
-/// Subsequent messages sent by Server after the initial AcceptedMsg.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+/// Messages sent by Server.
+#[derive(Serialize, Deserialize, Clone)]
 pub enum ServerMsg {
 	AddPlayer(Player),
-	DropPlayer { player_id: ID },
-	SwitchMap { map_name: String, players: Players, player_id: ID },
+	DropPlayer(ID),
+	SwitchMap { map_name: String, players: Players, player_id: ID, entities: Entities },
+	ForceMovePlayer(vec3),
 	RequestRespawn(SpawnPoint),
 	// Update a player's position, orientation, velocity (source of truth = client).
-	MovePlayer { player_id: ID, frame: Frame },
+	MovePlayer(ID, Frame),
 	// Update everything not controlled by `MovePlayer` (source of truth = server).
 	UpdatePlayer(Player),
+	UpdateEntity(Entity),
+	RemoveEntity(EID),
 	AddEffect(Effect),
-	LogMessage(String),
-	HUDMessage(String),
+
+	UpdateHUD(HUDUpdate),
+}
+
+impl ServerMsg {
+	pub fn to_all(self) -> Envelope<Self> {
+		self.to(Addressee::All)
+	}
+
+	pub fn to_just(self, player_id: ID) -> Envelope<Self> {
+		self.to(Addressee::Just(player_id))
+	}
+
+	pub fn to_not(self, player_id: ID) -> Envelope<Self> {
+		self.to(Addressee::Not(player_id))
+	}
+
+	pub fn to(self, to: Addressee) -> Envelope<Self> {
+		Envelope { to, msg: self }
+	}
 }

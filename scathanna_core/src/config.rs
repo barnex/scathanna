@@ -12,6 +12,10 @@ pub struct Config {
 	/// Player nickname, e.g. "Bob".
 	pub name: String,
 
+	/// Preferred team: red|blu
+	#[serde(default)]
+	pub team: String,
+
 	/// Resolution: width (pixels).
 	pub window_width: u32,
 

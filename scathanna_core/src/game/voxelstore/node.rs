@@ -211,9 +211,9 @@ mod test {
 	use super::*;
 
 	// Shorthand for constructing a Uniform Node.
-	fn uniform(voxeltype: u8) -> Node {
-		Uniform(VoxelType(voxeltype))
-	}
+	//fn uniform(voxel_type: u8) -> Node {
+	//	Uniform(VoxelType(voxel_type))
+	//}
 
 	// Shorthand for constructing a Composite Node w/ uniform children.
 	fn composite(ch: [u8; 8]) -> Node {

@@ -46,14 +46,19 @@ fn main_result() -> Result<()> {
 	let cli = Opts::from_args();
 	let config_file = abs_path(&cli.config);
 	println!("Config file: {}", config_file.to_string_lossy());
-	let args = Config::parse(&config_file)?;
+	let config = Config::parse(&config_file)?;
 
 	// this initializes the GL context, has to be called before any other GL calls.
 	println!("initializing OpenGL...");
-	let (win, event_loop) = init_gl_window(&args);
-	init_gl_options(&args);
+	let (win, event_loop) = init_gl_window(&config);
+	init_gl_options(&config);
+
+	let engine = Rc::new(Engine::new());
 
 	let mut handler: Box<dyn EventHandler> = match &cli.edit {
+		// no --edit: play
+		None => Box::new(NetClient::connect(engine.clone(), &config)?),
+		// --edit some_map
 		Some(map_name) => {
 			let dir = map_directory(&map_name);
 			match dir.exists() {
@@ -61,12 +66,11 @@ fn main_result() -> Result<()> {
 				true => Box::new(scathanna_core::EdState::load(&dir)?),
 			}
 		}
-		None => Box::new(NetClient::connect(&args)?),
 	};
 
 	// continuously pump redraws
-	let redraw_millis = 1000.0 / args.max_fps;
-	let mouse_sens = args.mouse_sensitivity * 0.01; // percent to fraction
+	let redraw_millis = 1000.0 / config.max_fps;
+	let mouse_sens = config.mouse_sensitivity * 0.01; // percent to fraction
 	let fps_cap_time = Duration::from_millis(redraw_millis as u64);
 	let proxy = event_loop.create_proxy();
 	std::thread::spawn(move || loop {
@@ -76,7 +80,7 @@ fn main_result() -> Result<()> {
 
 	let mut input_grabbed = release_input(&win, false /*input_grabbed*/); // start not grabbed, some window systems refuse to grab if cursor not in window.
 
-	let keymap = KeyMap::new(&args)?;
+	let keymap = KeyMap::new(&config)?;
 
 	event_loop.run(move |event, _, control_flow| {
 		*control_flow = ControlFlow::Wait;
@@ -184,8 +188,8 @@ fn init_gl_window(args: &Config) -> (Window, EventLoop) {
 		.with_fullscreen(fullscreen)
 		.with_resizable(args.window_resizable);
 	let gl_window = glutin::ContextBuilder::new() //
-		.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (4, 1)))
 		.with_vsync(args.vsync)
+		.with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (4, 1)))
 		.with_multisampling(args.msaa)
 		.build_windowed(window, &event_loop)
 		.unwrap();

@@ -90,23 +90,36 @@ impl Skeleton {
 
 	pub fn try_jump(&mut self, world: &World, jump_speed: f32) {
 		if self.on_ground(world) {
-			self.velocity.y = jump_speed
+			self.unconditional_jump(jump_speed)
 		}
 	}
 
+	pub fn unconditional_jump(&mut self, jump_speed: f32) {
+		self.velocity.y = jump_speed
+	}
+
 	pub fn try_walk(&mut self, dt: f32, world: &World, walk_speed: vec3) {
-		const MAX_AIRCTL_SPEED: f32 = 12.0;
+		const MAX_AIRCTL_SPEED: f32 = Player::WALK_SPEED;
+		const AIRCTL_ACCEL: f32 = 2.0;
+
 		if self.on_ground(world) {
 			self.velocity.x = walk_speed.x;
 			self.velocity.z = walk_speed.z;
 		} else {
-			if self.velocity.remove(1).len() < MAX_AIRCTL_SPEED {
-				let airctl = 0.8; // blocks / sec.
-				self.velocity += airctl * walk_speed * dt;
-			}
-
+			// flying through the air
+			
+			// always slightly damp movement
 			let damp = 0.1;
 			self.velocity *= 1.0 - damp * dt;
+
+			// allow to control movement in the air a bit.
+			if self.velocity.remove(1).len() > MAX_AIRCTL_SPEED {
+				// flying too fast, damp aggressively
+				self.velocity *= 1.0 - 4.0 * damp * dt;
+			} else {
+				// flying not too fast, allow some slow control
+				self.velocity += (AIRCTL_ACCEL * dt) * walk_speed;
+			}
 		}
 	}
 	pub fn set_frame(&mut self, frame: Frame) {

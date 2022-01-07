@@ -23,14 +23,22 @@ impl ClientState {
 		use ServerMsg::*;
 		match msg {
 			AddPlayer(player) => self.handle_add_player(player),
-			MovePlayer { player_id, frame } => self.handle_move_player(player_id, frame),
+			MovePlayer(player_id, frame) => self.handle_move_player(player_id, frame),
 			UpdatePlayer(player) => self.handle_update_player(player),
-			DropPlayer { player_id } => self.handle_drop_player(player_id),
+			ForceMovePlayer(position) => self.handle_force_move_player(position),
+			UpdateEntity(entity) => self.handle_update_entity(entity),
+			RemoveEntity(entity_id) => self.handle_remove_entity(entity_id),
+			DropPlayer(player_id) => self.handle_drop_player(player_id),
 			AddEffect(effect) => self.handle_add_effect(effect),
 			RequestRespawn(spawn_point) => self.handle_request_respawn(spawn_point),
-			LogMessage(message) => self.handle_log_message(message),
-			HUDMessage(message) => self.handle_hud_message(message),
-			SwitchMap { map_name, players, player_id } => self.handle_switch_map(&map_name, players, player_id),
+			UpdateHUD(update) => self.handle_update_hud(update),
+			SwitchMap { .. } => panic!("BUG: SwitchMap must be handled by NetClient"),
+			//SwitchMap {
+			//	map_name,
+			//	players,
+			//	player_id,
+			//	entities,
+			//} => self.handle_switch_map(&map_name, players, player_id, entities),
 		}
 	}
 
@@ -39,7 +47,7 @@ impl ClientState {
 	}
 
 	fn handle_move_player(&mut self, player_id: ID, frame: Frame) {
-		if let Some(p) = self.world.players.get_mut(&player_id) {
+		if let Some(p) = self.world.players.get_mut(player_id) {
 			p.skeleton.set_frame(frame)
 		} else {
 			eprintln!("client_state: handle_move_player: player #{} does not exist", player_id);
@@ -48,23 +56,34 @@ impl ClientState {
 
 	// Update part of player state controlled by server: everything except frame.
 	fn handle_update_player(&mut self, new: Player) {
-		if !self.world.players.contains_key(&new.id) {
+		if !self.world.players.contains(new.id) {
 			return;
 		}
-		let old = self.world.players.get_mut(&new.id).unwrap();
+		let old = self.world.players.get_mut(new.id).unwrap();
 		let mut new = new;
 		new.local = old.local.clone();
 		new.skeleton.set_frame(old.skeleton.frame());
 		*old = new;
 	}
 
+	fn handle_force_move_player(&mut self, position: vec3) {
+		self.local_player_mut().skeleton.position = position;
+	}
+
+	fn handle_update_entity(&mut self, entity: Entity) {
+		self.world.entities.insert(entity.id(), entity);
+	}
+
+	fn handle_remove_entity(&mut self, entity_id: EID) {
+		self.world.entities.remove(&entity_id);
+	}
+
 	fn handle_drop_player(&mut self, player_id: ID) {
-		self.world.players.remove(&player_id);
+		self.world.players.remove(player_id);
 	}
 
 	fn handle_request_respawn(&mut self, spawn_point: SpawnPoint) {
 		self.local_player_mut().next_spawn_point = spawn_point.position();
-		//self.local_player_mut().set_position(spawn_point.position());
 		self.local_player_mut().skeleton.velocity = vec3::ZERO;
 		self.local_player_mut().skeleton.orientation.pitch = 0.0;
 	}
@@ -73,18 +92,14 @@ impl ClientState {
 		self.world.effects.push(effect)
 	}
 
-	fn handle_switch_map(&mut self, map_name: &str, players: Players, player_id: ID) {
-		self.player_id = player_id;
-		// TODO: print error about missing files, exit(1)
-		self.world = World::with_players(map_name, players).expect("load map");
-	}
+	//fn handle_switch_map(&mut self, map_name: &str, players: Players, player_id: ID, entities: Entities) {
+	//	self.player_id = player_id;
+	//	// TODO: print error about missing files, exit(1)
+	//	self.world = World::from_map(map_name, players, entities).expect("load map");
+	//}
 
-	fn handle_log_message(&mut self, message: String) {
-		self.hud.log(message)
-	}
-
-	fn handle_hud_message(&mut self, message: String) {
-		self.hud.show(message)
+	fn handle_update_hud(&mut self, upd: HUDUpdate) {
+		self.hud.update(upd)
 	}
 
 	// __________________________________________________________ local control
@@ -111,9 +126,10 @@ impl ClientState {
 		for msg in msgs {
 			match msg {
 				MovePlayer { .. } => (/*already applied locally by control*/),
-				AddEffect { effect } => self.world.effects.push(effect.clone()),
+				AddEffect(effect) => self.world.effects.push(effect.clone()),
 				HitPlayer { .. } => (/* handled by server*/),
 				ReadyToSpawn => (/*handled by server*/),
+				Command(_) => (/*handled by server*/),
 			}
 		}
 	}
@@ -135,8 +151,8 @@ impl ClientState {
 	/// Extrapolate other player's positions based on their last know velocity.
 	/// This greatly reduces positional stutter in the face of network latency.
 	fn extrapolate_other_players(&mut self, dt: f32) {
-		for (id, player) in &mut self.world.players {
-			if *id != self.player_id {
+		for (id, player) in self.world.players.iter_mut() {
+			if id != self.player_id {
 				player.skeleton.position += dt * player.skeleton.velocity;
 			}
 		}
@@ -146,7 +162,7 @@ impl ClientState {
 	/// This is done locally by each client (do not send
 	/// feet position over the network all the time).
 	fn animate_players(&mut self, dt: f32) {
-		for (_, player) in &mut self.world.players {
+		for (_, player) in self.world.players.iter_mut() {
 			player.animate_feet(dt)
 		}
 	}
@@ -181,11 +197,11 @@ impl ClientState {
 
 	/// The player controlled by this client.
 	pub fn local_player(&self) -> &Player {
-		self.world.players.get(&self.player_id).expect("player does not exist")
+		&self.world.players[self.player_id]
 	}
 
 	pub fn local_player_mut(&mut self) -> &mut Player {
-		self.world.players.get_mut(&self.player_id).expect("player does not exist")
+		&mut self.world.players[self.player_id]
 	}
 
 	pub fn player_id(&self) -> ID {
@@ -196,3 +212,5 @@ impl ClientState {
 		&self.hud
 	}
 }
+
+impl ClientState {}

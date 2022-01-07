@@ -4,9 +4,11 @@ pub struct PlayerModels {
 	models: [PlayerModel; 7],
 }
 
+const HEAD_PITCH_FACTOR: f32 = 0.25;
+
 impl PlayerModels {
 	// TODO: lazy load?
-	pub fn new(engine: &mut Engine) -> Result<Self> {
+	pub fn new(engine: &Engine) -> Result<Self> {
 		Ok(Self {
 			models: [
 				PlayerModel::frog(engine)?, //
@@ -21,6 +23,8 @@ impl PlayerModels {
 	}
 
 	pub fn get(&self, avatar_id: u8) -> &PlayerModel {
+		// avatar_id gets checked higher up so should be valid.
+		// But just in case, return a default if invalid nevertheless.
 		self.models.get(avatar_id as usize).unwrap_or(&self.models[0])
 	}
 }
@@ -48,12 +52,12 @@ pub struct PlayerModel {
 	foot_sep: f32,
 }
 
-fn gun(engine: &mut Engine) -> Result<Model> {
-	Ok(Model::new(engine.wavefront_obj("bubblegun")?, Material::MatteTexture(engine.texture("confettigun", GREY))))
+fn gun(engine: &Engine) -> Result<Model> {
+	Ok(Model::new(engine.wavefront_obj("bubblegun")?, Material::MatteTexture(engine.texture("party_hat", WHITE))))
 }
 
 impl PlayerModel {
-	pub fn frog(engine: &mut Engine) -> Result<Self> {
+	pub fn frog(engine: &Engine) -> Result<Self> {
 		let texture = Material::MatteTexture(engine.texture("frog", GREEN));
 		Ok(Self {
 			head: Model::new(engine.wavefront_obj("froghead")?, texture.clone()),
@@ -66,7 +70,7 @@ impl PlayerModel {
 		})
 	}
 
-	pub fn panda(engine: &mut Engine) -> Result<Self> {
+	pub fn panda(engine: &Engine) -> Result<Self> {
 		let texture = Material::MatteTexture(engine.texture("panda", WHITE));
 		Ok(Self {
 			head: Model::new(engine.wavefront_obj("pandahead")?, texture.clone()),
@@ -79,7 +83,7 @@ impl PlayerModel {
 		})
 	}
 
-	pub fn pig(engine: &mut Engine) -> Result<Self> {
+	pub fn pig(engine: &Engine) -> Result<Self> {
 		let texture = Material::MatteTexture(engine.texture("pig", WHITE));
 		Ok(Self {
 			head: Model::new(engine.wavefront_obj("pighead")?, texture.clone()),
@@ -92,7 +96,7 @@ impl PlayerModel {
 		})
 	}
 
-	pub fn turkey(engine: &mut Engine) -> Result<Self> {
+	pub fn turkey(engine: &Engine) -> Result<Self> {
 		let texture = Material::MatteTexture(engine.texture("turkey", WHITE));
 		Ok(Self {
 			head: Model::new(engine.wavefront_obj("turkeyhead")?, texture.clone()),
@@ -105,7 +109,7 @@ impl PlayerModel {
 		})
 	}
 
-	pub fn hamster(engine: &mut Engine) -> Result<Self> {
+	pub fn hamster(engine: &Engine) -> Result<Self> {
 		let texture = Material::MatteTexture(engine.texture("hamster", WHITE));
 		Ok(Self {
 			head: Model::new(engine.wavefront_obj("hamsterhead")?, texture.clone()),
@@ -118,7 +122,7 @@ impl PlayerModel {
 		})
 	}
 
-	pub fn chicken(engine: &mut Engine) -> Result<Self> {
+	pub fn chicken(engine: &Engine) -> Result<Self> {
 		let texture = Material::MatteTexture(engine.texture("chicken", WHITE));
 		Ok(Self {
 			head: Model::new(engine.wavefront_obj("chickenhead")?, texture.clone()),
@@ -131,7 +135,7 @@ impl PlayerModel {
 		})
 	}
 
-	pub fn bunny(engine: &mut Engine) -> Result<Self> {
+	pub fn bunny(engine: &Engine) -> Result<Self> {
 		let texture = Material::MatteTexture(engine.texture("bunny", WHITE));
 
 		Ok(Self {
@@ -178,8 +182,19 @@ impl PlayerModel {
 	fn draw_head(&self, engine: &Engine, player: &Player) {
 		let Orientation { yaw, pitch } = player.orientation();
 		let head_pos = self.head_height * vec3::EY;
-		let transf = translation_matrix(player.position() + head_pos) * yaw_matrix(-yaw) * pitch_matrix(-pitch / 2.0) * scale_matrix(self.head_scale);
+		let transf = translation_matrix(player.position() + head_pos) * yaw_matrix(-yaw) * pitch_matrix(-pitch * HEAD_PITCH_FACTOR) * scale_matrix(self.head_scale);
 		engine.draw_model_with(&self.head, &transf);
+	}
+
+	pub fn draw_hat(&self, engine: &Engine, player: &Player, hat: &Model) {
+		let Orientation { yaw, pitch } = player.orientation();
+		let pitch_mat = pitch_matrix(-pitch * HEAD_PITCH_FACTOR);
+		let top_mat = translation_matrix((self.head_height + 0.75 * self.head_scale) * vec3::EY);
+
+		let yaw_mat = yaw_matrix(-yaw);
+		let pos_mat = translation_matrix(player.position());
+		let transf = &pos_mat * &yaw_mat * &pitch_mat * &top_mat;
+		engine.draw_model_with(hat, &transf);
 	}
 
 	fn draw_feet(&self, engine: &Engine, player: &Player) {

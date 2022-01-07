@@ -2,7 +2,7 @@ use std::mem;
 use std::ops::Mul;
 use vector::*;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 #[allow(non_camel_case_types)]
 pub struct mat4 {
 	el: [[f32; 4]; 4],

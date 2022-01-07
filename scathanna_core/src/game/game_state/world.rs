@@ -11,16 +11,18 @@ use super::internal::*;
 pub struct World {
 	pub map: MapData,
 	pub players: Players,
+	pub entities: HashMap<EID, Entity>, // TODO: struct Entities. fn insert(Entity), etc.
 	pub effects: Vec<Effect>,
 }
 
 impl World {
 	/// Construct a GameState by loading a map from local disk,
-	/// and adding the specified players (e.g. received from a Server).
-	pub fn with_players(map_name: &str, players: HashMap<ID, Player>) -> Result<Self> {
+	/// and adding the specified players and entities (e.g. received from a Server).
+	pub fn from_map(map_name: &str, players: Players, entities: Entities) -> Result<Self> {
 		Ok(Self {
 			map: MapData::load(map_name)?,
 			players,
+			entities,
 			effects: default(),
 		})
 	}
@@ -34,7 +36,7 @@ impl World {
 
 		let mut nearest = intersect_map.map(|t| (t, None));
 
-		for (&id, player) in &self.players {
+		for (id, player) in self.players.iter() {
 			if let Some(t) = player.intersect(ray) {
 				if t < nearest.map(|(t, _)| t).unwrap_or(f64::INFINITY) && id != player_id {
 					nearest = Some((t, Some(id)));
@@ -43,6 +45,12 @@ impl World {
 		}
 
 		nearest
+	}
+
+	// Iterate over (a copy of) all player IDs.
+	// (Does not hold self borrowed so can be conveniently used to self-modify).
+	pub fn entity_ids(&self) -> impl Iterator<Item = EID> {
+		self.entities.keys().copied().collect::<SmallVec<_>>().into_iter()
 	}
 
 	// Iterate over (a copy of) all player IDs.

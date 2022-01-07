@@ -25,6 +25,14 @@ impl BoundingBox<f32> {
 	pub fn to_f64(&self) -> BoundingBox<f64> {
 		BoundingBox::new(self.min.into(), self.max.into())
 	}
+
+	pub fn center(&self) -> vec3 {
+		(self.min + self.max) * 0.5
+	}
+
+	pub fn contains(&self, point: vec3) -> bool {
+		point.x > self.min.x && point.x < self.max.x && point.y > self.min.y && point.y < self.max.y && point.z > self.min.z && point.z < self.max.z
+	}
 }
 
 pub type BoundingBox64 = BoundingBox<f64>;

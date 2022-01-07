@@ -32,8 +32,8 @@ pub struct Shaders {
 	particles: Particles,
 	font: Font,
 
-	projection_matrix: mat4,
-	isometric_matrix: mat4,
+	projection_matrix: Cell<mat4>,
+	isometric_matrix: Cell<mat4>,
 
 	pub shader_switches: Counter,
 }
@@ -58,8 +58,8 @@ impl Shaders {
 			lightmap: Lightmap::new(),
 			particles: Particles::new(),
 			font: Font::new(),
-			projection_matrix: mat4::UNIT,
-			isometric_matrix: mat4::UNIT,
+			projection_matrix: Cell::new(mat4::UNIT),
+			isometric_matrix: Cell::new(mat4::UNIT),
 
 			shader_switches: Counter::new(),
 		}
@@ -72,9 +72,9 @@ impl Shaders {
 	///   (2) set_camera is called only once per frame, so this is not expensive
 	///   (3) it would be too easy to overlook some shader otherwise
 	///
-	pub fn set_camera(&mut self, (width, height): (u32, u32), camera: &Camera) {
-		self.projection_matrix = camera.matrix((width, height));
-		self.isometric_matrix = isometric_matrix((width, height));
+	pub fn set_camera(&self, (width, height): (u32, u32), camera: &Camera) {
+		self.projection_matrix.set(camera.matrix((width, height)));
+		self.isometric_matrix.set(isometric_matrix((width, height)));
 	}
 
 	/// Use `uniform_color.{vert, frag}` with a uniform fragment color.
@@ -83,7 +83,7 @@ impl Shaders {
 		self.lazy_switch(prog);
 		prog.uniform3f(self.uniform_color.uniform_color, color.x, color.y, color.z);
 		prog.uniform_matrix4f(self.uniform_color.base.model, false, transf.as_array());
-		prog.uniform_matrix4f(self.uniform_color.base.proj, false, self.projection_matrix.as_array());
+		prog.uniform_matrix4f(self.uniform_color.base.proj, false, self.projection_matrix.get().as_array());
 	}
 
 	/// Use `vertex_color.{vert, frag}` with per-vertex colors.
@@ -91,7 +91,7 @@ impl Shaders {
 		let prog = &self.vertex_color.prog;
 		self.lazy_switch(prog);
 		prog.uniform_matrix4f(self.vertex_color.model, false, transf.as_array());
-		prog.uniform_matrix4f(self.vertex_color.proj, false, self.projection_matrix.as_array());
+		prog.uniform_matrix4f(self.vertex_color.proj, false, self.projection_matrix.get().as_array());
 	}
 
 	/// Use `flat_texture.{vert, frag}`.
@@ -99,7 +99,7 @@ impl Shaders {
 		let prog = &self.flat_texture.prog;
 		self.lazy_switch(prog);
 		prog.uniform_matrix4f(self.flat_texture.model, false, transf.as_array());
-		prog.uniform_matrix4f(self.flat_texture.proj, false, self.projection_matrix.as_array());
+		prog.uniform_matrix4f(self.flat_texture.proj, false, self.projection_matrix.get().as_array());
 	}
 
 	/// Use `matte_texture.{vert, frag}`.
@@ -109,7 +109,7 @@ impl Shaders {
 		prog.uniform3f(self.matte_texture.sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
 		prog.uniform1f(self.matte_texture.ambient, ambient);
 		prog.uniform_matrix4f(self.matte_texture.base.model, false, transf.as_array());
-		prog.uniform_matrix4f(self.matte_texture.base.proj, false, self.projection_matrix.as_array());
+		prog.uniform_matrix4f(self.matte_texture.base.proj, false, self.projection_matrix.get().as_array());
 	}
 
 	/// Use `lightmap.{vert, frag}`.
@@ -119,7 +119,7 @@ impl Shaders {
 		prog.uniform1i(self.lightmap.texture_unit, 0);
 		prog.uniform1i(self.lightmap.lightmap_unit, 1);
 		prog.uniform_matrix4f(self.lightmap.base.model, false, transf.as_array());
-		prog.uniform_matrix4f(self.lightmap.base.proj, false, self.projection_matrix.as_array());
+		prog.uniform_matrix4f(self.lightmap.base.proj, false, self.projection_matrix.get().as_array());
 	}
 
 	/// Use `particles.{vert, frag}`.
@@ -131,7 +131,7 @@ impl Shaders {
 		prog.uniform4f(self.particles.color, color.x, color.y, color.z, alpha);
 		prog.uniform_matrix4f(self.particles.base.model, false, transf.as_array());
 		prog.uniform_matrix4f(self.particles.base.model, false, transf.as_array());
-		prog.uniform_matrix4f(self.particles.base.proj, false, self.projection_matrix.as_array());
+		prog.uniform_matrix4f(self.particles.base.proj, false, self.projection_matrix.get().as_array());
 	}
 
 	/// Use `font.{vert, frag}`.
@@ -141,7 +141,7 @@ impl Shaders {
 		prog.uniform2f(self.font.tex_offset, tex_offset.x, tex_offset.y);
 		prog.uniform2f(self.font.pos_offset, pos_offset.x, pos_offset.y);
 		prog.uniform3f(self.font.color, color.x, color.y, color.z);
-		prog.uniform_matrix4f(self.font.proj, false, self.isometric_matrix.as_array());
+		prog.uniform_matrix4f(self.font.proj, false, self.isometric_matrix.get().as_array());
 	}
 
 	/// Switch to shader if not yet in use
