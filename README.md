@@ -40,7 +40,6 @@ $EDITOR config.json
 
 ```
 cargo run --release --bin scathanna_server 127.0.0.1:3344 deck
-
 ```
 
 (where "deck" is the name of a map found in `assets/maps`).
@@ -71,6 +70,12 @@ The most useful options are:
   * `"msaa":4` Set anti-aliasing quality (0,1,2,4,8,...). Useful on slow hardware.
   * `"fullscreen": true` Run in borderless fullscreen mode.
 
+
+# Features
+
+  * Ray-traced lightmaps with indirect illumination
+  * Network multiplayer games (deadmatch / team deadmatch)
+  * Voxel-based map editor
 
 # Status
 
