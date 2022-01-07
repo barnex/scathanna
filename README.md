@@ -10,7 +10,7 @@ A 3D multiplayer shooter.
 
 2. Clone
 ```
-git clone https://github.com/barnex/scathanna-3d.git`
+git clone https://github.com/barnex/scathanna-3d.git
 ```
 
 3. Edit your preferences in `config.json`. In particular, chose a nickname and a server address.
