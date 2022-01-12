@@ -6,7 +6,7 @@ use scathanna_core::game::*;
 use scathanna_core::util::*;
 use scathanna_core::*;
 
-use glutin::event::{DeviceEvent, ElementState, Event, MouseScrollDelta, VirtualKeyCode, WindowEvent};
+use glutin::event::{DeviceEvent, ElementState, Event, MouseButton, MouseScrollDelta, VirtualKeyCode, WindowEvent};
 use glutin::event_loop::ControlFlow;
 use glutin::window;
 use std::path::PathBuf;
@@ -78,6 +78,8 @@ fn main_result() -> Result<()> {
 		sleep(fps_cap_time);
 	});
 
+	// Always hiding cursor immediately because of Wayland issue https://github.com/rust-windowing/winit/pull/1180#issue-496672144
+	win.window().set_cursor_visible(false);
 	let mut input_grabbed = release_input(&win, false /*input_grabbed*/); // start not grabbed, some window systems refuse to grab if cursor not in window.
 
 	let keymap = KeyMap::new(&config)?;
@@ -94,34 +96,25 @@ fn main_result() -> Result<()> {
 				win.swap_buffers().unwrap();
 			}
 			Event::DeviceEvent { event, .. } => match event {
+				//event => println!("DeviceEvent {:?}", event),
 				DeviceEvent::MouseMotion { delta, .. } => {
 					if input_grabbed {
 						handler.on_mouse_move(delta.0 * mouse_sens, delta.1 * mouse_sens)
 					}
 				}
-				DeviceEvent::Button { button, state } => {
-					if input_grabbed {
-						match button {
-							1 => handler.on_key(Key::Mouse1, state == ElementState::Pressed),
-							3 => handler.on_key(Key::Mouse3, state == ElementState::Pressed),
-							_ => (),
-						}
+				_ => (),
+			},
+			Event::WindowEvent { event, .. } => match event {
+				WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+				WindowEvent::MouseInput { button, state, .. } => {
+					input_grabbed = grab_input(&win, input_grabbed);
+					match button {
+						MouseButton::Left => handler.on_key(Key::Mouse1, state == ElementState::Pressed),
+						MouseButton::Right => handler.on_key(Key::Mouse3, state == ElementState::Pressed),
+						_ => (),
 					}
 				}
-				DeviceEvent::Key(input) => {
-					if let Some(code) = input.virtual_keycode {
-						if code == VirtualKeyCode::Escape {
-							input_grabbed = release_input(&win, input_grabbed);
-						}
-						if input_grabbed {
-							if let Some(key) = keymap.map(code, input.modifiers) {
-								let pressed = input.state == ElementState::Pressed;
-								handler.on_key(key, pressed)
-							}
-						}
-					}
-				}
-				DeviceEvent::MouseWheel { delta } => {
+				WindowEvent::MouseWheel { delta, .. } => {
 					if let MouseScrollDelta::LineDelta(_x, y) = delta {
 						if input_grabbed {
 							// Scroll delta can by any amount (e.g. 15.0), convert it to a single scroll event.
@@ -138,12 +131,20 @@ fn main_result() -> Result<()> {
 						}
 					}
 				}
-				_ => (),
-			},
-			Event::WindowEvent { event, .. } => match event {
-				WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-				WindowEvent::MouseInput { .. } => {
-					input_grabbed = grab_input(&win, input_grabbed);
+
+				WindowEvent::KeyboardInput { input, .. } => {
+					println!("WindowEvent::KeyboardInput {:?}", input);
+					if let Some(code) = input.virtual_keycode {
+						if code == VirtualKeyCode::Escape {
+							input_grabbed = release_input(&win, input_grabbed);
+						}
+						if input_grabbed {
+							if let Some(key) = keymap.map(code, input.modifiers) {
+								let pressed = input.state == ElementState::Pressed;
+								handler.on_key(key, pressed)
+							}
+						}
+					}
 				}
 				_ => (),
 			},
@@ -160,7 +161,8 @@ fn grab_input(win: &Window, input_grabbed: bool) -> bool {
 		if let Err(e) = win.window().set_cursor_grab(true) {
 			eprintln!("failed to grab cursor: {}", e);
 		}
-		win.window().set_cursor_visible(false);
+		// temporarily commented out because of Wayland issue https://github.com/rust-windowing/winit/pull/1180#issue-496672144
+		// win.window().set_cursor_visible(false);
 	}
 	true
 }
@@ -170,7 +172,8 @@ fn grab_input(win: &Window, input_grabbed: bool) -> bool {
 fn release_input(win: &Window, input_grabbed: bool) -> bool {
 	if input_grabbed {
 		let _ = win.window().set_cursor_grab(false);
-		win.window().set_cursor_visible(true);
+		// commented out because of Wayland issue https://github.com/rust-windowing/winit/pull/1180#issue-496672144
+		// win.window().set_cursor_visible(true);
 	}
 	false
 }
