@@ -96,7 +96,6 @@ fn main_result() -> Result<()> {
 				win.swap_buffers().unwrap();
 			}
 			Event::DeviceEvent { event, .. } => match event {
-				//event => println!("DeviceEvent {:?}", event),
 				DeviceEvent::MouseMotion { delta, .. } => {
 					if input_grabbed {
 						handler.on_mouse_move(delta.0 * mouse_sens, delta.1 * mouse_sens)
@@ -133,7 +132,6 @@ fn main_result() -> Result<()> {
 				}
 
 				WindowEvent::KeyboardInput { input, .. } => {
-					println!("WindowEvent::KeyboardInput {:?}", input);
 					if let Some(code) = input.virtual_keycode {
 						if code == VirtualKeyCode::Escape {
 							input_grabbed = release_input(&win, input_grabbed);
