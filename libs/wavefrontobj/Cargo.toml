@@ -5,6 +5,6 @@ authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-any_result = {path="../any_result"}
+anyhow = "1"
 vector = {path="../vector"}
 smallvec = "1"

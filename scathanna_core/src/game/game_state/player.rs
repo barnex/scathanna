@@ -24,7 +24,6 @@ pub struct Player {
 	pub local: LocalState,
 }
 
-
 /// Controlled by the local client, never overwritten by the server.
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct LocalState {
@@ -70,7 +69,7 @@ impl Player {
 	/// Called on a clone of the World's player (!so need to be careful for self-interaction!).
 	pub fn control(&mut self, upd: &mut ClientMsgs, input_state: &InputState, world: &World, dt: f32) {
 		if self.spawned {
-			self.tick_movement(input_state, world, dt);
+			self.tick_movement(upd, input_state, world, dt);
 			self.control_shooting(upd, input_state, world, dt);
 		} else {
 			self.set_orientation(input_state);
@@ -138,6 +137,8 @@ impl Player {
 		let end = self.shoot_at(world);
 		let len = (end - start).len();
 		upd.push(ClientMsg::AddEffect(Effect::particle_beam(start, self.orientation(), len, self.team.color_filter())));
+		upd.push(ClientMsg::PlaySound(SoundEffect::spatial(pick_random(&["bang1", "bang2", "bang3", "bang4"]), self.position(), 30.0)));
+		upd.push(ClientMsg::PlaySound(SoundEffect::spatial(pick_random(&["ricochet1", "ricochet2", "ricochet3", "ricochet4"]), end, 1.0)));
 
 		if let Some((_, Some(victim_id))) = world.intersect_except(self.id, &line_of_fire) {
 			upd.push(HitPlayer(victim_id));
@@ -146,45 +147,53 @@ impl Player {
 		// effect when shooting lava
 		if world.map.voxels.at(end.to_ivec()) == VoxelType::LAVA {
 			upd.push(AddEffect(Effect::particle_explosion(end, RED)));
+			upd.push(PlaySound(SoundEffect::spatial("lava", end, 1.0)))
 		}
 	}
 
 	// __________________ movement
 
-	fn tick_movement(&mut self, input_state: &InputState, world: &World, dt: f32) {
+	fn tick_movement(&mut self, upd: &mut ClientMsgs, input_state: &InputState, world: &World, dt: f32) {
 		self.set_orientation(input_state);
-		self.tick_walk(input_state, world, dt);
-		self.tick_jump(input_state, world, dt);
-		self.skeleton.tick(world, dt);
+		self.tick_walk(upd, input_state, world, dt);
+		self.tick_jump(upd, input_state, world, dt);
+		self.skeleton.tick(upd, world, dt);
 	}
 
-	fn tick_walk(&mut self, input_state: &InputState, world: &World, dt: f32) {
+	fn tick_walk(&mut self, upd: &mut ClientMsgs, input_state: &InputState, world: &World, dt: f32) {
 		let walk_speed = Self::WALK_SPEED * walk_dir(self.orientation().yaw, input_state);
 		self.skeleton.try_walk(dt, world, walk_speed);
 	}
 
-	fn tick_jump(&mut self, input_state: &InputState, world: &World, _dt: f32) {
+	fn tick_jump(&mut self, upd: &mut ClientMsgs, input_state: &InputState, world: &World, _dt: f32) {
 		if input_state.is_down(Key::Jump) {
-			self.skeleton.try_jump(world, Self::JUMP_SPEED)
+			if self.skeleton.try_jump(world, Self::JUMP_SPEED) {
+				upd.push(ClientMsg::PlaySound(SoundEffect::spatial("jump", self.position(), 0.3)))
+			}
 		}
 
 		if self.powerup == Some(EKind::XMasHat) && input_state.is_pressed(Key::Jump) {
-			self.skeleton.unconditional_jump(Self::JUMP_SPEED)
+			self.skeleton.unconditional_jump(Self::JUMP_SPEED);
+			upd.push(ClientMsg::PlaySound(SoundEffect::spatial("fly", self.position(), 0.3)))
 		}
 	}
 
 	pub fn animate_feet(&mut self, dt: f32) {
 		let walk_speed = self.skeleton.velocity;
+		let vspeed = self.skeleton.velocity.y;
 		if walk_speed != vec3::ZERO {
 			// move feet in semicircles while moving
 			self.local.feet_phase += dt * FEET_ANIM_SPEED;
+
+			if self.local.feet_phase > PI {
+				self.local.feet_phase = -PI;
+			}
 		} else {
 			// gradually relax feet to resting position while still
 			self.local.feet_phase *= 1.0 - (FEET_ANIM_DAMP * dt);
 			self.local.feet_phase = clamp(self.local.feet_phase, -PI, PI);
 		}
 
-		let vspeed = self.skeleton.velocity.y;
 		let target_pitch = if vspeed > 0.0 {
 			-30.0 * DEG
 		} else if vspeed < 0.0 {

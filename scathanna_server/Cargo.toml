@@ -5,7 +5,7 @@ authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-any_result = {path = "../libs/any_result"}
+anyhow = "1"
 scathanna_core = {path = "../scathanna_core"}
 structopt = "0.3"
 fnv = "1"

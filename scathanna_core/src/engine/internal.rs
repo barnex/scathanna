@@ -1,5 +1,7 @@
 pub use super::super::internal::*;
 
+pub use super::super::game::physics::*;
+
 pub use super::camera::*;
 pub use super::modelbuffer::*;
 pub use super::orientation::*;

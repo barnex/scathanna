@@ -5,6 +5,6 @@ authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
 edition = "2021"
 
 [dependencies]
+anyhow = "1"
 image = "0.23"
-any_result = { path = "../any_result" }
 vector = { path = "../vector" }

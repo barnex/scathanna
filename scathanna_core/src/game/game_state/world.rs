@@ -52,10 +52,4 @@ impl World {
 	pub fn entity_ids(&self) -> impl Iterator<Item = EID> {
 		self.entities.keys().copied().collect::<SmallVec<_>>().into_iter()
 	}
-
-	// Iterate over (a copy of) all player IDs.
-	// (Does not hold self borrowed so can be conveniently used to self-modify).
-	// pub fn player_ids(&self) -> impl Iterator<Item = ID> {
-	// 	self.players.keys().copied().collect::<SmallVec<_>>().into_iter()
-	// }
 }

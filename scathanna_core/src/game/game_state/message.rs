@@ -38,6 +38,9 @@ pub enum ClientMsg {
 	/// Spawn a visual effect.
 	AddEffect(Effect),
 
+	/// Start a sound effect.
+	PlaySound(SoundEffect),
+
 	/// I have shot player with ID `victim`.
 	HitPlayer(ID),
 
@@ -60,7 +63,7 @@ pub enum ServerMsg {
 	UpdateEntity(Entity),
 	RemoveEntity(EID),
 	AddEffect(Effect),
-
+	PlaySound(SoundEffect),
 	UpdateHUD(HUDUpdate),
 }
 

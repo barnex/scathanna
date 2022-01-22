@@ -23,9 +23,14 @@ impl Skeleton {
 		}
 	}
 
-	pub fn tick(&mut self, world: &World, dt: f32) {
+	pub fn tick(&mut self, upd: &mut ClientMsgs, world: &World, dt: f32) {
+		let v1 = self.velocity.y;
 		self.tick_gravity(G, dt);
 		self.tick_move(world, dt);
+		let v2 = self.velocity.y;
+		if v1 < -1.0 && v2 == 0.0 {
+			upd.push(ClientMsg::PlaySound(SoundEffect::spatial("land", self.position, 0.3)));
+		}
 		self.tick_rescue(world, dt);
 	}
 
@@ -88,9 +93,12 @@ impl Skeleton {
 
 	// _________________________________________________________ mutators
 
-	pub fn try_jump(&mut self, world: &World, jump_speed: f32) {
+	pub fn try_jump(&mut self, world: &World, jump_speed: f32) -> bool {
 		if self.on_ground(world) {
-			self.unconditional_jump(jump_speed)
+			self.unconditional_jump(jump_speed);
+			true
+		} else {
+			false
 		}
 	}
 
@@ -107,7 +115,7 @@ impl Skeleton {
 			self.velocity.z = walk_speed.z;
 		} else {
 			// flying through the air
-			
+
 			// always slightly damp movement
 			let damp = 0.1;
 			self.velocity *= 1.0 - damp * dt;

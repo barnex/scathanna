@@ -6,14 +6,22 @@ use super::internal::*;
 /// World mutations that are not allowed on the client side need to be requested from the server
 /// (see ServerState).
 pub struct ClientState {
+	engine: Rc<Engine>,
 	player_id: ID,
 	world: World,
 	hud: HUD,
+	pending_diffs: Vec<ClientMsg>,
 }
 
 impl ClientState {
-	pub fn new(player_id: ID, world: World) -> Self {
-		Self { player_id, world, hud: default() }
+	pub fn new(engine: Rc<Engine>, player_id: ID, world: World) -> Self {
+		Self {
+			player_id,
+			world,
+			hud: default(),
+			engine,
+			pending_diffs: default(),
+		}
 	}
 
 	// __________________________________________________________ remote control
@@ -30,15 +38,10 @@ impl ClientState {
 			RemoveEntity(entity_id) => self.handle_remove_entity(entity_id),
 			DropPlayer(player_id) => self.handle_drop_player(player_id),
 			AddEffect(effect) => self.handle_add_effect(effect),
+			PlaySound(sound_effect) => self.handle_play_sound(&sound_effect),
 			RequestRespawn(spawn_point) => self.handle_request_respawn(spawn_point),
 			UpdateHUD(update) => self.handle_update_hud(update),
 			SwitchMap { .. } => panic!("BUG: SwitchMap must be handled by NetClient"),
-			//SwitchMap {
-			//	map_name,
-			//	players,
-			//	player_id,
-			//	entities,
-			//} => self.handle_switch_map(&map_name, players, player_id, entities),
 		}
 	}
 
@@ -89,28 +92,74 @@ impl ClientState {
 	}
 
 	fn handle_add_effect(&mut self, effect: Effect) {
-		self.world.effects.push(effect)
+		self.world.effects.push(effect);
 	}
-
-	//fn handle_switch_map(&mut self, map_name: &str, players: Players, player_id: ID, entities: Entities) {
-	//	self.player_id = player_id;
-	//	// TODO: print error about missing files, exit(1)
-	//	self.world = World::from_map(map_name, players, entities).expect("load map");
-	//}
 
 	fn handle_update_hud(&mut self, upd: HUDUpdate) {
 		self.hud.update(upd)
 	}
 
+	// __________________________________________________________ sound
+
+	fn handle_play_sound(&self, sound: &SoundEffect) {
+		self.play_sound(sound)
+	}
+
+	fn play_sound(&self, sound: &SoundEffect) {
+		// TODO: muffle behind walls, etc.
+		match &sound.spatial {
+			None => self.play_sound_raw(&sound.clip_name, sound.volume),
+			Some(spatial) => self.play_sound_spatial(&sound.clip_name, sound.volume, &spatial),
+		}
+	}
+
+	fn play_sound_raw(&self, clip_name: &str, volume: f32) {
+		self.engine.sound().play_raw_volume(clip_name, volume)
+	}
+
+	fn play_sound_spatial(&self, clip_name: &str, volume: f32, spatial: &Spatial) {
+		/// Sounds closer than this distance do not become any louder.
+		/// Otherwise very nearby sounds could become infinitely loud.
+		const UNIT_DIST: f32 = 40.0;
+
+		let player = self.local_player();
+		let ear_pos = self.local_player().camera().position;
+		let sound_pos = spatial.location;
+		if (ear_pos - sound_pos).len() < 8.0 {
+			// spatial audio does not work / is pointless when sound location is at or very near player location
+			self.play_sound_raw(clip_name, volume.clamp(0.0, 1.0))
+		} else {
+			let azimuth = azimuth(&player.skeleton.frame(), sound_pos);
+			let distance2 = (ear_pos - sound_pos).len2();
+			let falloff_volume = (volume * (UNIT_DIST * UNIT_DIST) / distance2).clamp(0.0, 1.0);
+			// muffle sound when obstructed by a wall
+			let obstructed_volume = if self.is_obstructed(ear_pos, sound_pos) { 0.3 * falloff_volume } else { falloff_volume };
+			self.engine.sound().play_spatial(clip_name, azimuth, obstructed_volume)
+		}
+	}
+
+	// does a wall obstruct the line of sight between two positions?
+	fn is_obstructed(&self, pos1: vec3, pos2: vec3) -> bool {
+		let dir = (pos2 - pos1).normalized();
+		let len = (pos2 - pos1).len();
+		let ray = DRay::new(pos1.into(), dir.into());
+		let t = self.world.map.intersect(&ray).unwrap_or(f64::INFINITY) as f32;
+		t < len
+	}
+
 	// __________________________________________________________ local control
 
 	pub fn tick(&mut self, input_state: &InputState, dt: f32) -> ClientMsgs {
-		let upd = self.control_player(input_state, dt);
+		self.control_player(input_state, dt);
+
 		self.extrapolate_other_players(dt);
-		self.animate_players(dt);
+		self.animate_footsteps(dt);
 		self.tick_effects(dt);
 		self.hud.tick(dt);
-		upd
+
+		let diff = mem::take(&mut self.pending_diffs);
+		self.apply_self_msgs(&diff);
+		diff
 	}
 
 	/// Apply a message by the local client, without round-tripping to the server.
@@ -126,7 +175,8 @@ impl ClientState {
 		for msg in msgs {
 			match msg {
 				MovePlayer { .. } => (/*already applied locally by control*/),
-				AddEffect(effect) => self.world.effects.push(effect.clone()),
+				AddEffect(effect) => self.handle_add_effect(effect.clone()),
+				PlaySound(sound) => self.handle_play_sound(sound),
 				HitPlayer { .. } => (/* handled by server*/),
 				ReadyToSpawn => (/*handled by server*/),
 				Command(_) => (/*handled by server*/),
@@ -135,17 +185,10 @@ impl ClientState {
 	}
 
 	/// Control a player via keyboard/mouse
-	#[must_use]
-	fn control_player(&mut self, input_state: &InputState, dt: f32) -> ClientMsgs {
-		let mut upd = ClientMsgs::new();
+	fn control_player(&mut self, input_state: &InputState, dt: f32) {
 		let mut clone = self.local_player().clone();
-
-		clone.control(&mut upd, input_state, &self.world, dt);
-
+		clone.control(&mut self.pending_diffs, input_state, &self.world, dt);
 		*self.local_player_mut() = clone;
-
-		self.apply_self_msgs(&upd);
-		upd
 	}
 
 	/// Extrapolate other player's positions based on their last know velocity.
@@ -159,12 +202,58 @@ impl ClientState {
 	}
 
 	/// Animate the players feet if they are moving.
-	/// This is done locally by each client (do not send
-	/// feet position over the network all the time).
-	fn animate_players(&mut self, dt: f32) {
-		for (_, player) in self.world.players.iter_mut() {
-			player.animate_feet(dt)
+	/// This is done locally by each client (do not send feet position over the network all the time).
+	/// Also generate footstep, jump,... sounds locally (do not send these sound effects over the network).
+	fn animate_footsteps(&mut self, dt: f32) {
+		for player_id in self.world.players.copied_ids() {
+			let prev = &self.world.players[player_id].local.clone();
+			self.world.players[player_id].animate_feet(dt);
+			let curr = &self.world.players[player_id].local;
+			self.make_footstep_sounds(player_id, prev, curr);
 		}
+	}
+
+	fn make_footstep_sounds(&self, player_id: ID, prev: &LocalState, curr: &LocalState) {
+		let speed = self.world.players[player_id].skeleton.velocity;
+		let vspeed = speed.y;
+		let walking = { vspeed == 0.0 && speed != vec3::ZERO };
+
+		if walking {
+			if prev.feet_phase.signum() != curr.feet_phase.signum() {
+				// make one's own footsteps less loud
+				// (quite distracting otherwise)
+				let volume = if player_id == self.player_id { 0.05 } else { 0.3 };
+				self.play_sound_spatial(
+					if self.world.players[player_id].is_on_lava(&self.world) {
+						"lava"
+					} else {
+						Self::random_footstep_clip()
+					},
+					volume,
+					&Spatial {
+						location: self.world.players[player_id].position(),
+					},
+				)
+			}
+		}
+	}
+
+	//fn is_on_ground(&self, player_id: ID) -> bool {
+	//	let probe = self.world.players[player_id].position() - 0.2 * vec3::EY;
+	//	!self.world.map.voxels.at(probe.to_ivec()).is_empty()
+	//}
+
+	fn random_footstep_clip() -> &'static str {
+		pick_random(&[
+			"footstep01", //
+			"footstep02",
+			"footstep03",
+			"footstep04",
+			"footstep05",
+			"footstep06",
+			"footstep07",
+			"footstep08",
+		])
 	}
 
 	//___________________________________________________________________________ effects
@@ -213,4 +302,19 @@ impl ClientState {
 	}
 }
 
-impl ClientState {}
+fn azimuth(frame: &Frame, sound_pos: vec3) -> f32 {
+	let sound_dir = (sound_pos - frame.position).with(|v| v.y = 0.0).normalized();
+	let look_dir = frame.orientation.look_dir().with(|v| v.y = 0.0).normalized();
+	let sin_theta = look_dir.cross(sound_dir).y;
+	let cos_theta = look_dir.dot(sound_dir);
+	let azimuth = f32::atan2(sin_theta, cos_theta);
+	if azimuth.is_nan() {
+		0.0
+	} else {
+		azimuth
+	}
+}
+
+pub fn pick_random<'a>(clips: &[&'a str]) -> &'a str {
+	&clips[rand::thread_rng().gen_range(0..clips.len())]
+}

@@ -6,15 +6,18 @@ const MIPMAP_LEVELS: u32 = 6;
 pub struct Engine {
 	viewport: Cell<(u32, u32)>,
 	shaders: Shaders,
+	//	cam_pos: Cell<vec3>,
 
 	//view_distance: f32,
-	sun_direction: vec3,
+	sun_direction: Cell<vec3>, // unit vector towards sun
 	ambient: f32,
 
 	tex_cache: RefCell<HashMap<String, Rc<Texture>>>,
 	obj_cache: RefCell<HashMap<String, Rc<VertexArray>>>,
 
 	font_char_vao: VertexArray,
+
+	soundpack: SoundPack,
 
 	// performance counters
 	texture_binds: Counter,
@@ -27,7 +30,7 @@ pub struct Engine {
 const DBG_STATS: bool = true;
 
 impl Engine {
-	pub fn new() -> Self {
+	pub fn new(config: &Config) -> Self {
 		gl_safe::glEnable(gl::DEPTH_TEST);
 		gl_safe::glEnable(gl::CULL_FACE);
 
@@ -36,7 +39,7 @@ impl Engine {
 			viewport: Cell::new((0, 0)),
 			tex_cache: default(),
 			obj_cache: default(),
-			sun_direction: vec3(1.0, 2.0, 0.5).normalized(),
+			sun_direction: Cell::new(vec3(0.0, 1.0, 0.0)),
 			ambient: 0.2,
 			font_char_vao: Self::build_vao_(&Self::char_rect()),
 			texture_binds: Counter::new(),
@@ -44,12 +47,21 @@ impl Engine {
 			vertices_drawn: Counter::new(),
 			last_perf: Cell::new(Instant::now()),
 			mean_fps: Cell::new(0.0),
+			soundpack: SoundPack::new(config),
 		}
 	}
 
 	// for access to counters
 	pub fn shaders(&self) -> &Shaders {
 		&self.shaders
+	}
+}
+
+// Sound
+
+impl Engine {
+	pub fn sound(&self) -> &SoundPack {
+		&self.soundpack
 	}
 }
 
@@ -189,11 +201,7 @@ impl Engine {
 impl Engine {
 	pub fn set_camera(&self, viewport: (u32, u32), camera: &Camera) {
 		glViewport(0, 0, viewport.0 as i32, viewport.1 as i32);
-
 		self.viewport.set(viewport);
-		//self.camera_pos = camera.position;
-		//self.camera_dir = camera.orientation.look_dir();
-
 		self.shaders.set_camera(viewport, camera)
 	}
 
@@ -202,8 +210,12 @@ impl Engine {
 		glClear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 	}
 
-	pub fn set_sun_direction(&mut self, sun_direction: vec3) {
-		self.sun_direction = sun_direction
+	pub fn set_sun_direction(&self, sun_direction: vec3) {
+		self.sun_direction.set(sun_direction)
+	}
+
+	pub fn sun_direction(&self) -> vec3 {
+		self.sun_direction.get()
 	}
 
 	pub fn set_ambient(&mut self, ambient: f32) {
@@ -284,7 +296,11 @@ impl Engine {
 			}
 			MatteTexture(tex) => {
 				self.bind_texture(&tex, 0 /*unit*/);
-				self.shaders.use_matte_texture(self.sun_direction, self.ambient, transf)
+				self.shaders.use_matte_texture(self.sun_direction.get(), self.ambient, transf)
+			}
+			Glossy(tex) => {
+				self.bind_texture(&tex, 0 /*unit*/);
+				self.shaders.use_glossy(self.sun_direction.get(), 1.0 /*sun_intens*/, self.ambient, transf)
 			}
 			Lightmap { texture, lightmap } => {
 				self.bind_texture(&texture, 0 /*unit*/);
@@ -401,6 +417,10 @@ impl Engine {
 				.sub_image2d(0, 0, 0, size.x, size.y, gl::RGBA, gl::UNSIGNED_BYTE, &img.raw_rgba())
 				.filter_linear(),
 		)
+	}
+
+	pub fn use_texture(&self, tex: &Texture) {
+		self.bind_texture(tex, 0 /* unit */)
 	}
 
 	fn bind_texture(&self, tex: &Texture, unit: u32) {

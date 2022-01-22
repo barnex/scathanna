@@ -1,4 +1,6 @@
-pub use any_result::*;
+pub use anyhow::anyhow;
+pub use anyhow::Error;
+pub use anyhow::Result;
 pub use imageutil::*;
 pub use matrix::*;
 pub use raytrace::*;
@@ -25,6 +27,9 @@ pub use super::game::*;
 pub use super::input::*;
 pub use super::util::*;
 
+pub use std::borrow::Borrow;
+pub use std::borrow::BorrowMut;
+pub use std::borrow::Cow;
 pub use std::cell::Cell;
 pub use std::cell::RefCell;
 pub use std::fmt;
@@ -43,6 +48,8 @@ pub use std::sync::mpsc::Sender;
 pub use std::sync::Arc;
 pub use std::time::Duration;
 pub use std::time::Instant;
+
+pub type CowStr = Cow<'static, str>;
 
 /// Shorthand for `Default::default()`.
 #[inline]

@@ -16,7 +16,7 @@ pub enum EffectType {
 }
 
 pub const LASERBEAM_TTL: f32 = 0.25; // seconds
-pub const PARTICLES_TTL: f32 = 1.0; // seconds
+pub const PARTICLES_TTL: f32 = 2.0; // seconds
 pub const RESPAWN_TTL: f32 = 1.5; // seconds
 
 impl Effect {

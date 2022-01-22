@@ -23,11 +23,13 @@ use gl::types::*;
 pub struct Shaders {
 	// Currently active shader, used to avoid unnecessary switches.
 	curr_shader: Cell<GLuint>,
+	cam_pos: Cell<vec3>,
 
 	uniform_color: UniformColor,
 	vertex_color: SimpleShader,
 	flat_texture: SimpleShader,
 	matte_texture: MatteTexture,
+	glossy: Glossy,
 	lightmap: Lightmap,
 	particles: Particles,
 	font: Font,
@@ -55,11 +57,13 @@ impl Shaders {
 			vertex_color: SimpleShader::new(include_str!("vertex_color.vert"), include_str!("vertex_color.frag")),
 			flat_texture: SimpleShader::new(include_str!("flat_texture.vert"), include_str!("flat_texture.frag")),
 			matte_texture: MatteTexture::new(),
+			glossy: Glossy::new(),
 			lightmap: Lightmap::new(),
 			particles: Particles::new(),
 			font: Font::new(),
 			projection_matrix: Cell::new(mat4::UNIT),
 			isometric_matrix: Cell::new(mat4::UNIT),
+			cam_pos: Cell::new(vec3::ZERO),
 
 			shader_switches: Counter::new(),
 		}
@@ -110,6 +114,20 @@ impl Shaders {
 		prog.uniform1f(self.matte_texture.ambient, ambient);
 		prog.uniform_matrix4f(self.matte_texture.base.model, false, transf.as_array());
 		prog.uniform_matrix4f(self.matte_texture.base.proj, false, self.projection_matrix.get().as_array());
+	}
+
+	/// Use `glossy.{vert, frag}`.
+	pub fn use_glossy(&self, sun_dir: vec3, sun_intens: f32, ambient: f32, transf: &mat4) {
+		let shader = &self.glossy;
+		let prog = &shader.base.prog;
+		self.lazy_switch(prog);
+		let cam_pos = self.cam_pos.get();
+		prog.uniform3f(shader.sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
+		prog.uniform1f(shader.sun_intens, sun_intens);
+		prog.uniform1f(shader.ambient, ambient);
+		prog.uniform3f(shader.cam_pos, cam_pos.x, cam_pos.y, cam_pos.z);
+		prog.uniform_matrix4f(shader.base.model, false, transf.as_array());
+		prog.uniform_matrix4f(shader.base.proj, false, self.projection_matrix.get().as_array());
 	}
 
 	/// Use `lightmap.{vert, frag}`.
@@ -227,6 +245,28 @@ impl MatteTexture {
 		Self {
 			sun_dir: base.prog.uniform_location("sun_dir"),
 			ambient: base.prog.uniform_location("ambient"),
+			base,
+		}
+	}
+}
+
+/// Wraps matte_texture.{vert,frag}.
+struct Glossy {
+	base: SimpleShader,
+	sun_dir: UniformLocation,
+	sun_intens: UniformLocation,
+	ambient: UniformLocation,
+	cam_pos: UniformLocation,
+}
+
+impl Glossy {
+	fn new() -> Self {
+		let base = SimpleShader::new(include_str!("glossy.vert"), include_str!("glossy.frag"));
+		Self {
+			sun_dir: base.prog.uniform_location("sun_dir"),
+			sun_intens: base.prog.uniform_location("sun_intens"),
+			ambient: base.prog.uniform_location("ambient"),
+			cam_pos: base.prog.uniform_location("cam_pos"),
 			base,
 		}
 	}

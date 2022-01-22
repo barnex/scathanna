@@ -4,7 +4,7 @@ mod editor;
 mod game_state;
 mod gl_client;
 pub mod net;
-mod physics;
+pub mod physics;
 mod voxel_world;
 mod voxelstore;
 

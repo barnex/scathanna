@@ -1,6 +1,6 @@
 use super::internal::*;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct Config {
 	/// Server address to connect to (e.g. "127.0.0.1:3344").
 	/// (String rather than Address for JSON interop.)
@@ -26,6 +26,7 @@ pub struct Config {
 	pub fullscreen: bool,
 
 	/// Disable window resizing.
+	#[serde(default = "f_true")]
 	pub window_resizable: bool,
 
 	/// Disable vsync.
@@ -44,11 +45,23 @@ pub struct Config {
 	pub mouse_sensitivity: f64,
 
 	/// Up, Left, Down, Right keys, e.g.: "wasd".
+	#[serde(default = "f_wasd")]
 	pub movement_keys: String,
+
+	/// Enable sounds.
+	#[serde(default = "f_true")]
+	pub sound: bool,
+}
+
+fn f_true() -> bool {
+	true
+}
+fn f_wasd() -> String {
+	"wasd".into()
 }
 
 impl Config {
 	pub fn parse(path: &Path) -> Result<Self> {
-		serde_json::from_reader(open(path)?).map_err(|err| error(format!("Error in {}: {}", path.to_string_lossy(), err)))
+		serde_json::from_reader(open(path)?).map_err(|err| anyhow!("Error in {}: {}", path.to_string_lossy(), err))
 	}
 }

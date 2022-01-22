@@ -40,7 +40,7 @@ impl FromStr for Team {
 			"red" => Ok(Red),
 			"blu" | "blue" => Ok(Blue),
 			"green" => Ok(Green),
-			bad => err(format!("unknown team `{}`, options: `red`, `blue`, `green`", bad)),
+			bad => Err(anyhow!("unknown team `{}`, options: `red`, `blue`, `green`", bad)),
 		}
 	}
 }

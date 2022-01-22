@@ -1,5 +1,4 @@
 use super::internal::*;
-use smallvec;
 use std::str::FromStr;
 
 /// A single line of a wavefront file, in parsed from.
@@ -26,7 +25,7 @@ type SmallVec<T> = smallvec::SmallVec<[T; 4]>;
 pub struct VIndex(pub i32, pub Option<i32>, pub Option<i32>);
 
 impl FromStr for ParsedLine {
-	type Err = any_result::Error;
+	type Err = Error;
 
 	/// Parse a single line from a wavefront obj file.
 	/// https://en.wikipedia.org/wiki/Wavefront_.obj_file.
@@ -50,7 +49,7 @@ impl FromStr for ParsedLine {
 }
 
 impl FromStr for VIndex {
-	type Err = any_result::Error;
+	type Err = Error;
 
 	/// Parse vertex indices like `1/2/3`, `3//4`, `5`.
 	/// https://en.wikipedia.org/wiki/Wavefront_.obj_file#Vertex_indices.
@@ -134,5 +133,5 @@ fn smooth(arg: &str) -> Result<bool> {
 }
 
 fn syntax_error<T>() -> Result<T> {
-	any_result::err("syntax error")
+	Err(anyhow!("syntax error"))
 }

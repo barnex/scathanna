@@ -55,14 +55,14 @@ impl EdState {
 		let mut voxels = Voxels::new();
 		voxels.set_range(&Cuboid::cube(ivec3(0, 0, 0), Voxels::CELL_SIZE), VoxelType(1));
 		let voxel_world = VoxelWorld::new(voxels);
-		let engine = Rc::new(Engine::new());
+		let engine = Rc::new(Engine::new(&Config::default()));
 		let metadata = Metadata::new();
 		Ok(Self::new(engine, dir, voxel_world, metadata))
 	}
 
 	/// Load EdState from a `my_map.sc/` directory.
 	pub fn load(dir: &Path) -> Result<Self> {
-		let engine = Rc::new(Engine::new());
+		let engine = Rc::new(Engine::new(&Config::default()));
 		let voxel_world = VoxelWorld::load(&engine, dir)?;
 		let metadata = Metadata::load(&dir.join(MapData::METADATA_FILE)).unwrap_or_default();
 		Ok(Self::new(engine, dir, voxel_world, metadata))

@@ -1,4 +1,4 @@
-use any_result::*;
+use anyhow::Result;
 use gl;
 use gl_safe::*;
 use scathanna_core::game::net::*;
@@ -53,7 +53,7 @@ fn main_result() -> Result<()> {
 	let (win, event_loop) = init_gl_window(&config);
 	init_gl_options(&config);
 
-	let engine = Rc::new(Engine::new());
+	let engine = Rc::new(Engine::new(&config));
 
 	let mut handler: Box<dyn EventHandler> = match &cli.edit {
 		// no --edit: play

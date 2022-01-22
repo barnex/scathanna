@@ -7,6 +7,14 @@ pub struct Metadata {
 
 	#[serde(default)]
 	pub pickup_points: Vec<PickupPoint>,
+
+	#[serde(default = "default_sun_dir")]
+	pub sun_direction: vec3,
+}
+
+fn default_sun_dir() -> vec3 {
+	// value used for lightmap baking before stored in map metadata.
+	vec3(0.304855380424846, 0.609710760849692, 0.731652913019631)
 }
 
 impl Metadata {

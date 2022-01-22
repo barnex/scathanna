@@ -1,4 +1,13 @@
-use super::internal::*;
+use super::errormessage::*;
+use super::wireformat::*;
+
+use anyhow::anyhow;
+use anyhow::Result;
+
+use serde::de::DeserializeOwned;
+use serde::Serialize;
+
+use std::io::Write;
 use std::io::{BufReader, BufWriter};
 use std::net::{Shutdown, TcpStream};
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
@@ -52,7 +61,7 @@ where
 
 	/// Attempts to send a Message.
 	pub fn send(&mut self, msg: T) -> Result<()> {
-		Ok(self.0.send(msg)?)
+		self.0.send(msg).map_err(|err| anyhow!("netpipe: {}", err))
 	}
 }
 
@@ -71,10 +80,10 @@ where
 		match self.0.try_recv() {
 			Ok(result) => match result {
 				Ok(msg) => Some(Ok(msg)),
-				Err(e) => Some(Err(Box::new(e))),
+				Err(e) => Some(Err(Box::new(e).into())),
 			},
 			Err(TryRecvError::Empty) => None,
-			Err(e) => Some(Err(Box::new(e))),
+			Err(e) => Some(Err(Box::new(e).into())),
 		}
 	}
 }
@@ -100,11 +109,9 @@ where
 				// then consume all further pending messages, if any,
 				// flush them all together.
 				let msg = worker_recv.recv()?;
-				//bincode::serialize_into(&mut buf, &msg)?;
 				serialize_into(&mut buf, &msg)?;
 
 				for msg in worker_recv.try_iter() {
-					//bincode::serialize_into(&mut buf, &msg)?;
 					serialize_into(&mut buf, &msg)?;
 				}
 				buf.flush()?;
@@ -140,4 +147,5 @@ where
 	});
 }
 
+// Sendable result.
 type PipeResult<T> = std::result::Result<T, ErrorMessage>;

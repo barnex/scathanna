@@ -1,4 +1,4 @@
-use any_result::*;
+use anyhow::*;
 use glutin::event::{ModifiersState, VirtualKeyCode};
 use scathanna_core::*;
 
@@ -13,7 +13,7 @@ impl KeyMap {
 	pub fn new(config: &Config) -> Result<Self> {
 		let wasd = &config.movement_keys;
 		if wasd.len() != 4 {
-			return err(format!("configuration error: `movement_keys` requires 4 characters (e.g. `wasd`), got: `{}`", wasd));
+			return Err(anyhow!("configuration error: `movement_keys` requires 4 characters (e.g. `wasd`), got: `{}`", wasd));
 		}
 
 		let wasd = wasd.as_bytes();
@@ -122,6 +122,6 @@ fn keycode_for(c: u8) -> Result<VirtualKeyCode> {
 		'x' => X,
 		'y' => Y,
 		'z' => Z,
-		_ => return err(format!("Sorry, key `{}` cannot be used for movement, use a-z", c)),
+		_ => return Err(anyhow!("Sorry, key `{}` cannot be used for movement, use a-z", c)),
 	})
 }

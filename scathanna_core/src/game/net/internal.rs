@@ -1,4 +1,5 @@
 pub use super::super::internal::*;
+pub use super::errormessage::*;
 pub use super::netpipe::*;
 pub use super::wireformat::*;
 pub use super::*;

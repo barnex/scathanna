@@ -29,7 +29,7 @@ impl Parser {
 		for (line_num, line) in reader.lines().enumerate() {
 			let line = line?;
 			self.parse_line(&line) //
-				.map_err(|e| error(format!("line {}: {}: {}", line_num, line, e)))?;
+				.map_err(|e| anyhow!("line {}: {}: {}", line_num, line, e))?;
 		}
 
 		self.flush_curr_object()?;
@@ -100,5 +100,5 @@ impl Parser {
 
 // 1-based indexing, return error when out of bounds.
 fn index_1<T: Clone>(v: &Vec<T>, i: usize) -> Result<T> {
-	Ok(v.get(i - 1).ok_or_else(|| error("invalid index"))?.clone())
+	Ok(v.get(i - 1).ok_or_else(|| anyhow!("invalid index"))?.clone())
 }

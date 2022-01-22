@@ -22,7 +22,7 @@ impl FromStr for GameType {
 		Ok(match s {
 			"dm" | "deathmatch" => GameType::DeadMatch(default()),
 			"tm" | "team" | "teammatch" => GameType::TeamMatch(default()),
-			bad => return err(format!("unknown game type `{}`, options: `deathmatch`, `teammatch`", bad)),
+			bad => return Err(anyhow!("unknown game type `{}`, options: `deathmatch`, `teammatch`", bad)),
 		})
 	}
 }

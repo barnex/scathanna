@@ -27,7 +27,7 @@ impl ModelPack {
 
 		for kind in EKind::ALL_EKINDS {
 			let obj_file = kind.as_str();
-			let model = Model::new(engine.wavefront_obj_scaled(obj_file, 3.0)?, Material::MatteTexture(engine.texture(obj_file, GREY))).double_sided();
+			let model = Model::new(engine.wavefront_obj_scaled(obj_file, 3.0)?, Material::Glossy(engine.texture(obj_file, GREY))).double_sided();
 			models.insert(obj_file.to_owned(), model);
 		}
 		Ok(models)

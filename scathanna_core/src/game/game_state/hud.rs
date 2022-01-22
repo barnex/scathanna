@@ -17,7 +17,7 @@ const MSG_TTL: f32 = 4.0;
 const LOG_TTL: f32 = 4.0;
 
 // Max log queue length.
-const MAX_LOG_MSG: usize = 8;
+const MAX_LOG_MSG: usize = 3;
 
 impl HUD {
 	pub fn update(&mut self, upd: HUDUpdate) {

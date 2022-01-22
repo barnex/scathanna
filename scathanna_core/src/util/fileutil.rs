@@ -12,12 +12,12 @@ use std::thread;
 
 /// BufReader for reading file with more descriptive message on error.
 pub fn open(file: &Path) -> Result<impl Read> {
-	Ok(BufReader::new(File::open(file).map_err(|err| error(format!("open {:?}: {}", file, err)))?))
+	Ok(BufReader::new(File::open(file).map_err(|err| anyhow!("open {:?}: {}", file, err))?))
 }
 
 /// BufWriter for writing file with more descriptive message on error.
 pub fn create(file: &Path) -> Result<impl Write> {
-	Ok(BufWriter::new(File::create(file).map_err(|err| error(format!("open {:?}: {}", file, err)))?))
+	Ok(BufWriter::new(File::create(file).map_err(|err| anyhow!("create {:?}: {}", file, err))?))
 }
 
 /// Attempt to prefix `file` with the executable's path.

@@ -60,7 +60,7 @@ impl NetClient {
 				players,
 				entities,
 			} => (map_name, player_id, players, entities),
-			_ => return err("expected initial server message to be SwitchMap"),
+			_ => return Err(anyhow!("expected initial server message to be SwitchMap")),
 		};
 		println!("accepted as #{}", player_id);
 

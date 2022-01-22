@@ -1,6 +1,7 @@
 mod internal;
 
 mod client;
+mod errormessage;
 mod netpipe;
 mod server;
 pub mod wireformat;

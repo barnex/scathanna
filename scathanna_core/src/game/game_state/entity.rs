@@ -123,7 +123,7 @@ impl FromStr for EKind {
 			.into_iter()
 			.filter(|k| k.as_str() == s)
 			.next()
-			.ok_or(error(format!("unknown entity: {}", s)))
+			.ok_or(anyhow!("unknown entity: {}", s))
 	}
 }
 

@@ -5,7 +5,7 @@ authors = ["Arne Vansteenkiste <barnex@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-any_result = {path = "../libs/any_result"}
+anyhow = "1"
 gl = "0.14"
 gl_safe = {path = "../libs/gl_safe"}
 vector = {path = "../libs/vector"}

@@ -39,12 +39,14 @@ impl GLClient {
 		let dir = map_directory(&world.map.name);
 		let voxel_models = VoxelModels::load(&engine, &world.map.voxels, &dir, ENABLE_BORDERS)?;
 
+		engine.set_sun_direction(world.map.metadata.sun_direction);
+
 		Ok(Self {
 			last_tick: Instant::now(),
 			input_state: InputState::new(),
 			mouse_sens: 0.001, // TODO
 
-			state: ClientState::new(player_id, world),
+			state: ClientState::new(engine.clone(), player_id, world),
 			voxel_models,
 			model_pack: ModelPack::new(engine.clone())?,
 			engine,
@@ -98,7 +100,12 @@ impl GLClient {
 		match e.typ {
 			SimpleLine { start, end } => self.draw_simple_line_effect(start, end),
 			LaserBeam { start, orientation, len } => self.model_pack.draw_laserbeam_effect(start, orientation, len, e.ttl),
-			ParticleBeam { start, orientation, len, color_filter } => self.model_pack.draw_particle_beam_effect(start, orientation, len, color_filter, e.ttl),
+			ParticleBeam {
+				start,
+				orientation,
+				len,
+				color_filter,
+			} => self.model_pack.draw_particle_beam_effect(start, orientation, len, color_filter, e.ttl),
 			ParticleExplosion { pos, color } => {
 				if camera.can_see(pos) {
 					self.model_pack.draw_particles_effect(pos, color, e.ttl)
@@ -122,8 +129,10 @@ impl GLClient {
 				// don't draw players before they spawn
 				continue;
 			}
+
 			if player.id == self.state.player_id() {
-				self.draw_player_1st_person(player);
+				let sun_intens = self.sun_intensity_at(player.center());
+				self.draw_player_1st_person(player, sun_intens);
 			} else {
 				if camera.can_see(player.position()) {
 					self.draw_player_3d_person(player)
@@ -132,9 +141,18 @@ impl GLClient {
 		}
 	}
 
-	fn draw_player_1st_person(&self, player: &Player) {
+	fn sun_intensity_at(&self, pos: vec3) -> f32 {
+		let ray = DRay::new(pos.into(), self.state.world().map.metadata.sun_direction.to_f64());
+
+		match self.state.world().map.voxels.intersects(&ray) {
+			false => 1.0,
+			true => 0.5,
+		}
+	}
+
+	fn draw_player_1st_person(&self, player: &Player, sun_intens: f32) {
 		let model = self.model_pack.player_model(player.avatar_id);
-		model.draw_1st_person(&self.engine, player);
+		model.draw_1st_person(&self.engine, player, sun_intens);
 		if DBG_GEOMETRY {
 			self.draw_line_of_fire(player);
 		}

@@ -33,7 +33,7 @@ impl ServerState {
 		println!("game type: {}", &game_type);
 
 		if maplist.len() == 0 {
-			return err("server: maplist: need at least one map");
+			return Err(anyhow!("server: maplist: need at least one map"));
 		}
 		// TODO: verify all maps on startup.
 
@@ -85,6 +85,7 @@ impl ServerState {
 
 		self.log(format!("{} joined", &player.name)); //
 		self.hud_message(player_id, format!("Welcome to {}.", self.map_name()));
+		self.pending_diffs.push(PlaySound(SoundEffect::raw("begin")).to_just(player_id));
 		self.pending_diffs.push(AddPlayer(player).to_all());
 		self.broadcast_scores_mini();
 
@@ -107,6 +108,7 @@ impl ServerState {
 			MovePlayer(frame) => self.handle_move_player(player_id, frame),
 			ReadyToSpawn => self.handle_ready_to_respawn(player_id),
 			AddEffect(effect) => self.handle_add_effect(player_id, effect),
+			PlaySound(sound) => self.handle_play_sound(player_id, sound),
 			HitPlayer(victim_id) => self.handle_hit_player(player_id, victim_id),
 			Command(cmd) => self.handle_command(player_id, cmd),
 		};
@@ -147,6 +149,7 @@ impl ServerState {
 			if self.try_kill_player(player_id, None) {
 				self.increment_score(player_id, -1);
 				self.record_add_effect(Effect::particle_explosion(self.player(player_id).center(), RED)); // TODO: duplicate with confetti
+				self.broadcast_sound_at("death_lava", self.player(player_id).center(), 3.0);
 				self.log(format!("{} went swimming in hot lava", &self.player(player_id).name));
 				self.pending_diffs.push(UpdateHUD(HUDUpdate::Message("You fell in lava".to_owned())).to_just(player_id));
 			}
@@ -222,6 +225,7 @@ impl ServerState {
 
 		self.record_remove_entity(pickup_id);
 		self.record_apply_to_player(player_id, |p| p.powerup = Some(powerup));
+		self.broadcast_sound_at(powerup.as_str(), self.player(player_id).position(), 1.0);
 
 		self.hud_message(player_id, format!("You got the {}\n[{}]", powerup_name, powerup.description()));
 		self.log(format!("{} has the {}", &self.player(player_id).name, powerup_name));
@@ -279,6 +283,7 @@ impl ServerState {
 
 		if self.try_kill_player(victim_id, Some(player_id)) {
 			self.increment_score(player_id, 1);
+			self.broadcast_sound_at("kill", self.player(victim_id).position(), 1.0);
 			self.hud_message(victim_id, format!("You got confettied by {}", self.player(player_id).name));
 			self.hud_message(player_id, format!("You confettied {}", self.player(victim_id).name));
 			self.log(format!(
@@ -366,6 +371,7 @@ impl ServerState {
 			p.spawned = true;
 			p.invulnerability_ttl = spawn_protect // spawn kill protection
 		});
+		self.broadcast_sound_at("respawn", self.player(player_id).center(), 1.0)
 	}
 
 	// ____________________________________________________________________________ effects
@@ -374,6 +380,19 @@ impl ServerState {
 	// There is little point in adding visual effects to the server's world.
 	pub fn handle_add_effect(&mut self, player_id: ID, effect: Effect) {
 		self.pending_diffs.push(AddEffect(effect).to_not(player_id))
+	}
+
+	// Handle a client's PlaySound message: just broadcast to other clients.
+	pub fn handle_play_sound(&mut self, player_id: ID, sound: SoundEffect) {
+		self.pending_diffs.push(PlaySound(sound).to_not(player_id))
+	}
+
+	fn broadcast_sound_at(&mut self, clip_name: &'static str, location: vec3, volume: f32) {
+		self.broadcast_sound(SoundEffect::spatial(clip_name, location, volume))
+	}
+
+	fn broadcast_sound(&mut self, sound: SoundEffect) {
+		self.pending_diffs.push(PlaySound(sound).to_all())
 	}
 
 	// ____________________________________________________________________________ drop
@@ -408,7 +427,7 @@ impl ServerState {
 		match cmd {
 			"summon" => self.summon(player_id, one_arg(args)?),
 			"switch" => self.switch_map(one_arg(args)?),
-			unknown => err(format!("unknown command: `{}`", unknown)),
+			unknown => Err(anyhow!("unknown command: `{}`", unknown)),
 		}
 	}
 
@@ -420,7 +439,7 @@ impl ServerState {
 	}
 
 	fn switch_map(&mut self, arg: &str) -> Result<()> {
-		let i = self.maplist.iter().position(|name| name == arg).ok_or(error(format!("`{}` not in map list", arg)))?;
+		let i = self.maplist.iter().position(|name| name == arg).ok_or(anyhow!("`{}` not in map list", arg))?;
 
 		let mut world2 = World::from_map(&self.maplist[i], default(), default())?;
 
@@ -527,6 +546,7 @@ impl ServerState {
 				p.invulnerability_ttl = Some(DEFAULT_INVULN_TTL)
 			});
 			self.log(format!("{} was saved by their party hat", self.player(victim_id).name));
+			self.broadcast_sound_at("protect", self.player(victim_id).center(), 1.0);
 			return false;
 		}
 
