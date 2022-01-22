@@ -6,7 +6,15 @@ A 3D multiplayer shooter.
 
 ## Quickstart
 
-1. Install Rust as per https://www.rust-lang.org/tools/install.
+1. Dependencies
+
+Install Rust as per https://www.rust-lang.org/tools/install.
+
+On Ubuntu/Debian, install:
+
+```
+sudo apt install libasound2-dev pkgconf
+```
 
 2. Clone
 ```
@@ -74,8 +82,21 @@ The most useful options are:
 # Features
 
   * Ray-traced lightmaps with indirect illumination
-  * Network multiplayer games (deadmatch / team deadmatch)
+  * Network multiplayer games (deathmatch / team deathmatch)
   * Voxel-based map editor
+
+# Architecture
+
+## Rendering stack
+
+| glutin            | Top-level event loop
+|-------------------| ---
+| gl_client         | Game specific logic (`draw_player`, `draw_effect`...)
+| engine            | High-level primitives (`draw_model`, `Material`, `set_camera`...)
+| gl_obj            | Ergonomic GL types: Texture, Shader, ... (`impl Drop`, `!Send`,...)
+| gl_safe           | Safe GL bindings (`pub fn create_texture...`)
+| gl                | unsafe GL bindings (`unsafe fn create_texture...`)
+
 
 # Status
 
