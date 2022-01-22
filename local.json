@@ -1,0 +1,15 @@
+{
+	"server": "127.0.0.1:3344",
+	"name": "Local Player",
+	"avatar": "panda",
+	"movement_keys": "wasd",
+	"mouse_sensitivity": 100,
+	"window_width": 1024,
+	"window_height": 768,
+	"window_resizable": true,
+	"fullscreen": false,
+	"vsync": true,
+	"max_fps": 200,
+	"msaa": 4,
+	"alpha_blending": true
+}

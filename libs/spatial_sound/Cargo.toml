@@ -1,0 +1,9 @@
+[package]
+name = "spatial_sound"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cpal = "0.13.4"
+anyhow = "1"
+lewton = "0.10.2"
