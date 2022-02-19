@@ -20,7 +20,7 @@ impl LightmapAllocator {
 	/// Call `alloc` on each face.
 	/// Does not necessarily conserve the original ordering.
 	pub fn alloc_all(&mut self, mut faces: Vec<Rectangle>) -> Vec<(Rectangle, uvec2)> {
-		faces.sort_by_key(|r| r.size.y); // reduces lightmap fullness 3-10x
+		faces.sort_by_key(|r| r.size.y()); // reduces lightmap fullness 3-10x
 		faces
 			.into_iter()
 			.map(move |face| {
@@ -43,26 +43,26 @@ impl LightmapAllocator {
 	/// .                                 
 	/// .   4 .   .   .   .   .   .   .   
 	pub fn alloc(&mut self, size: uvec2) -> uvec2 {
-		debug_assert!(size.x > 0 && size.y > 0);
+		debug_assert!(size.x() > 0 && size.y() > 0);
 
 		let size = size + uvec2(1, 1);
 
-		if self.curr.x + size.x >= self.size {
+		if self.curr.x() + size.x() >= self.size {
 			// next line
-			self.curr.x = MARGIN;
-			self.curr.y = self.next_y;
+			self.curr[0] = MARGIN;
+			self.curr[1] = self.next_y;
 		}
 
-		self.next_y = u32::max(self.next_y, self.curr.y + size.y + MARGIN);
+		self.next_y = u32::max(self.next_y, self.curr.y() + size.y() + MARGIN);
 
 		let result = self.curr;
-		self.curr.x += size.x + MARGIN;
+		self.curr[0] += size.x() + MARGIN;
 		result
 	}
 
 	/*
 	pub fn fullness(&self) -> f32 {
-		(self.curr.y as f32) / (self.size as f32)
+		(self.current.y as f32) / (self.size as f32)
 	}
 	*/
 }

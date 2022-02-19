@@ -5,16 +5,16 @@ use super::internal::*;
 pub fn walk_dir(yaw: f32, input: &InputState) -> vec3 {
 	let mut dir = vec3::ZERO;
 	if input.is_down(Key::Left) {
-		dir.x -= 1.0;
+		dir[X] -= 1.0;
 	}
 	if input.is_down(Key::Right) {
-		dir.x += 1.0;
+		dir[X] += 1.0;
 	}
 	if input.is_down(Key::Forward) {
-		dir.z -= 1.0;
+		dir[Z] -= 1.0;
 	}
 	if input.is_down(Key::Backward) {
-		dir.z += 1.0;
+		dir[Z] += 1.0;
 	}
 	if dir == vec3::ZERO {
 		return vec3::ZERO;
@@ -28,10 +28,10 @@ pub fn walk_dir(yaw: f32, input: &InputState) -> vec3 {
 pub fn fly_dir(yaw: f32, input: &InputState) -> vec3 {
 	let mut fly_dir = walk_dir(yaw, input);
 	if input.is_down(Key::Jump) {
-		fly_dir.y += 1.0;
+		fly_dir[Y] += 1.0;
 	}
 	if input.is_down(Key::Crouch) {
-		fly_dir.y -= 1.0;
+		fly_dir[Y] -= 1.0;
 	}
 	fly_dir.safe_normalized()
 }

@@ -16,8 +16,8 @@ pub fn join_squares(squares: Vec<Rectangle>, cell_pos: ivec3) -> Vec<Rectangle> 
 	let mut buf = TileBuffer::new();
 	for s in squares.into_iter() {
 		let size = {
-			debug_assert!(s.size.x == s.size.y);
-			s.size.x
+			debug_assert!(s.size.x() == s.size.y());
+			s.size.x()
 		};
 		buf.push_square((s.position - cell_pos, s.direction, size));
 	}
@@ -89,8 +89,8 @@ impl TileBuffer {
 			for ix in 0..size_of_sq_at[iy].len() {
 				let size2d = size_of_sq_at[iy][ix];
 				if size2d != uvec2(0, 0) {
-					debug_assert!(size2d.x > 0);
-					debug_assert!(size2d.y > 0);
+					debug_assert!(size2d.x() > 0);
+					debug_assert!(size2d.y() > 0);
 					let pos2d = ivec2(ix as i32, iy as i32);
 					let pos3d = pos2d.insert(axis, normal_pos) + pos_offset;
 					buf.push(Rectangle {
@@ -116,8 +116,8 @@ impl TileBuffer {
 			let size = *size;
 			for iy in 0..size {
 				for ix in 0..size {
-					let ix = ix + corner.x as u32;
-					let iy = iy + corner.y as u32;
+					let ix = ix + corner.x() as u32;
+					let iy = iy + corner.y() as u32;
 					debug_assert!(size_of_sq_at[iy as usize][ix as usize] == uvec2(0, 0)); // no overwrites please
 					size_of_sq_at[iy as usize][ix as usize] = uvec2(1, 1);
 				}
@@ -147,7 +147,7 @@ impl TileBuffer {
 					(1, 1) => match run_start {
 						None => run_start = Some(ix),
 						Some(start) => {
-							tiles[iy][start].x += 1;
+							tiles[iy][start][0] += 1;
 							tiles[iy][ix] = uvec2(0, 0);
 						}
 					},
@@ -185,9 +185,9 @@ impl TileBuffer {
 					(len, 1) => match run_start {
 						None => run_start = Some(iy),
 						Some(start) => {
-							if len == tiles[start][ix].x {
+							if len == tiles[start][ix].x() {
 								// strip lengths match: remove this strip, increase the height of the current run.
-								tiles[start][ix].y += 1;
+								tiles[start][ix][1] += 1;
 								tiles[iy][ix] = uvec2(0, 0);
 							} else {
 								// strip lengths don't match: cannot fuse, new run starts.

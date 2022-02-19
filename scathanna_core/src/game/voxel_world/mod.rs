@@ -2,9 +2,9 @@ mod internal;
 
 pub use bakery::*;
 pub use borders::*;
+pub use cell_model::*;
 pub use lightmap_baking::*;
 pub use voxel_world::*; // TODO: move
-pub use cell_model::*;
 
 mod bakery;
 mod borders;

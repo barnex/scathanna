@@ -36,11 +36,11 @@ impl Texture {
 	}
 
 	pub fn new2d(internalformat: GLenum, levels: u32, size: uvec2) -> Self {
-		Self::create(gl::TEXTURE_2D).storage2d(levels as i32, internalformat, size.x, size.y)
+		Self::create(gl::TEXTURE_2D).storage2d(levels as i32, internalformat, size.x(), size.y())
 	}
 
 	pub fn new3d(internalformat: GLenum, levels: u32, size: uvec3) -> Self {
-		Self::create(gl::TEXTURE_3D).storage3d(levels as i32, internalformat, size.x, size.y, size.z)
+		Self::create(gl::TEXTURE_3D).storage3d(levels as i32, internalformat, size.x(), size.y(), size.z())
 	}
 
 	/// Simultaneously specify storage for all levels of a one-dimensional texture.

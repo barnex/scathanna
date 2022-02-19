@@ -72,6 +72,9 @@ impl GLClient {
 		let camera = &self.state.local_player().camera();
 		self.engine.set_camera((width, height), camera);
 		self.engine.clear(0.8, 0.8, 1.0);
+
+		//glDisable(gl::SAMPLE_SHADING);
+
 		self.voxel_models.draw(&self.engine, camera);
 		self.draw_players(camera);
 		self.draw_entities(camera);
@@ -142,7 +145,7 @@ impl GLClient {
 	}
 
 	fn sun_intensity_at(&self, pos: vec3) -> f32 {
-		let ray = DRay::new(pos.into(), self.state.world().map.metadata.sun_direction.to_f64());
+		let ray = Ray64::new(pos.into(), self.state.world().map.metadata.sun_direction.to_f64());
 
 		match self.state.world().map.voxels.intersects(&ray) {
 			false => 1.0,

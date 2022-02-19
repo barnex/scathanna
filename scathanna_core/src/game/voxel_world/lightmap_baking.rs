@@ -47,21 +47,24 @@ pub fn bake_face(voxels: &Voxels, img: &mut Image<Color>, lm_idx: uvec2, rect: &
 	let min = lm_idx;
 	let max = min + rect.size;
 
-	for iy in min.y..=max.y {
-		for ix in min.x..=max.x {
-			let dy = (iy - min.y) as i32;
-			let dx = (ix - min.x) as i32;
+	for iy in min.y()..=max.y() {
+		for ix in min.x()..=max.x() {
+			let dy = (iy - min.y()) as i32;
+			let dx = (ix - min.x()) as i32;
 
 			let [tan_x, tan_y] = rect.direction.tangents();
 			let world_pos = rect.position + dx * tan_x.ivec() + dy * tan_y.ivec();
 
-			*img.at_mut((ix, iy)) = match voxeltype {
-				VoxelType(2) => Color::WHITE,
-				VoxelType(10) => Color::WHITE,
-				_ => match quality {
-					false => bake_point_fast(voxels, world_pos, rect.direction),
-					true => bake_point_traced(voxels, world_pos, rect.direction),
-				},
+			if ix < img.width() && iy < img.height() {
+				// HACK in case lightmap is too small
+				*img.at_mut((ix, iy)) = match voxeltype {
+					VoxelType(2) => Color::WHITE,
+					VoxelType(10) => Color::WHITE,
+					_ => match quality {
+						false => bake_point_fast(voxels, world_pos, rect.direction),
+						true => bake_point_traced(voxels, world_pos, rect.direction),
+					},
+				}
 			}
 		}
 	}
@@ -105,7 +108,7 @@ fn sample_ambient_light(rng: &mut ThreadRng, i: u32, (sh1, sh2): (f32, f32), vox
 	let pos = pos + u * du + v * dv;
 	let (r, s) = halton23_scrambled(i, (sh1, sh2));
 	let dir = cosine_sphere((r, s), normal_vec);
-	let ray = DRay::new(pos.into(), dir.into()).offset(0.01);
+	let ray = Ray64::new(pos.into(), dir.into()).offset(0.01);
 
 	match voxels.intersect(&ray) {
 		None => Color::new(0.85, 0.85, 1.0),                   // sky
@@ -134,7 +137,7 @@ fn sample_direct_light(rng: &mut ThreadRng, i: u32, (sh1, sh2): (f32, f32), voxe
 	// direct
 	let (r, s) = halton23_scrambled(i, (sh1, sh2));
 	let dir = (SUN_DIR + 0.04 * cosine_sphere((r, s), normal_vec)).normalized();
-	let ray = DRay::new(pos.into(), dir.into()).offset(0.01);
+	let ray = Ray64::new(pos.into(), dir.into()).offset(0.01);
 	if !voxels.intersects(&ray) {
 		f32::max(0.0, normal_vec.dot(SUN_DIR)) * Color::new(1.0, 0.98, 0.9)
 	} else {
@@ -147,7 +150,7 @@ pub fn direct_sunlight_point(voxels: &Voxels, pos: vec3, normal: Direction) -> f
 	let ambient = 0.0;
 	let cos_theta = normal.vec().dot(SUN_DIR);
 	if cos_theta > 0.0 {
-		let ray = DRay::new(pos.into(), SUN_DIR.into()).offset(0.01);
+		let ray = Ray64::new(pos.into(), SUN_DIR.into()).offset(0.01);
 		if voxels.intersects(&ray) {
 			ambient
 		} else {
@@ -214,7 +217,7 @@ pub fn add_borders(src: &Image<Color>) -> Image<Color> {
 					}
 				}
 				let avg = acc / (n as f32);
-				dst.set((ix as u32, iy as u32), avg);
+				dst.try_set((ix as u32, iy as u32), avg);
 			}
 		}
 	}

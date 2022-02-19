@@ -1,8 +1,8 @@
 pub mod internal;
 
 mod decode;
-mod ringbuffer;
 mod mixer;
+mod ringbuffer;
 
 pub mod spatial_filter;
 

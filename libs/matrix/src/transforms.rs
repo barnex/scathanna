@@ -5,7 +5,7 @@ use vector::*;
 /// https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
 pub fn rotation_matrix(axis: vec3, radians: f32) -> mat4 {
 	let axis = axis.normalized();
-	let (ux, uy, uz) = (axis.x, axis.y, axis.z);
+	let (ux, uy, uz) = (axis.x(), axis.y(), axis.z());
 	let c = f32::cos(radians);
 	let s = f32::sin(radians);
 	let c1 = 1.0 - c;
@@ -49,7 +49,7 @@ pub fn translation_matrix(delta: vec3) -> mat4 {
 		[1.0, 0.0, 0.0, 0.0], //
 		[0.0, 1.0, 0.0, 0.0],
 		[0.0, 0.0, 1.0, 0.0],
-		[delta.x, delta.y, delta.z, 1.0],
+		[delta.x(), delta.y(), delta.z(), 1.0],
 	])
 }
 

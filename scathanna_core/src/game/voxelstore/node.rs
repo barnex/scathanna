@@ -69,7 +69,7 @@ impl Node {
 					let child_size = self_size / 2;
 					let mask = child_size as i32;
 					let child_dir = range.position().map(|v| ((v & mask) != 0) as usize);
-					let child_idx = child_dir.z << 2 | child_dir.y << 1 | child_dir.x << 0;
+					let child_idx = child_dir.z() << 2 | child_dir.y() << 1 | child_dir.x() << 0;
 					debug_assert!(child_idx <= 8);
 
 					let child_range = range.translate(-child_dir.map(|v| v as i32) * (child_size as i32));
@@ -99,11 +99,11 @@ impl Node {
 		}
 	}
 
-	pub fn intersects(&self, self_range: Cube, ray: &DRay) -> bool {
+	pub fn intersects(&self, self_range: Cube, ray: &Ray64) -> bool {
 		self.intersect(self_range, ray).is_some()
 	}
 
-	pub fn intersect(&self, self_range: Cube, ray: &DRay) -> Option<(VoxelType, f64)> {
+	pub fn intersect(&self, self_range: Cube, ray: &Ray64) -> Option<(VoxelType, f64)> {
 		if self == &Node::Uniform(VoxelType(0)) {
 			return None;
 		}
@@ -243,8 +243,11 @@ mod test {
 		{
 			let mut node = Node::default();
 			node.set_range(S, &cube((0, 0, 0), S), v(2));
-			assert_eq!(node.intersect(Cube::new(ivec3(0, 0, 0), S), &DRay::new(dvec3(-1.0, 0.5, 0.5), dvec3(1.0, 0.0, 0.0))), Some((v(2), 1.0)));
-			assert_eq!(node.intersect(Cube::new(ivec3(0, 0, 0), S), &DRay::new(dvec3(-1.0, 0.5, 0.5), dvec3(-1.0, 0.0, 0.0))), None);
+			assert_eq!(
+				node.intersect(Cube::new(ivec3(0, 0, 0), S), &Ray64::new(dvec3(-1.0, 0.5, 0.5), dvec3(1.0, 0.0, 0.0))),
+				Some((v(2), 1.0))
+			);
+			assert_eq!(node.intersect(Cube::new(ivec3(0, 0, 0), S), &Ray64::new(dvec3(-1.0, 0.5, 0.5), dvec3(-1.0, 0.0, 0.0))), None);
 		}
 
 		// uniform node at (16,0,0)
@@ -252,18 +255,18 @@ mod test {
 			let mut node = Node::default();
 			node.set_range(S, &cube((0, 0, 0), S), v(2));
 			assert_eq!(
-				node.intersect(Cube::new(ivec3(16, 0, 0), S), &DRay::new(dvec3(-1.0, 0.5, 0.5), dvec3(1.0, 0.0, 0.0))),
+				node.intersect(Cube::new(ivec3(16, 0, 0), S), &Ray64::new(dvec3(-1.0, 0.5, 0.5), dvec3(1.0, 0.0, 0.0))),
 				Some((v(2), 17.0))
 			);
-			assert_eq!(node.intersect(Cube::new(ivec3(16, 0, 0), S), &DRay::new(dvec3(-1.0, 0.5, 0.5), dvec3(-1.0, 0.0, 0.0))), None);
+			assert_eq!(node.intersect(Cube::new(ivec3(16, 0, 0), S), &Ray64::new(dvec3(-1.0, 0.5, 0.5), dvec3(-1.0, 0.0, 0.0))), None);
 		}
 
 		// empty node should not intersect
 		{
 			let mut node = Node::default();
 			node.set_range(S, &cube((0, 0, 0), S), v(0));
-			assert_eq!(node.intersect(Cube::new(ivec3(0, 0, 0), S), &DRay::new(dvec3(-1.0, 0.5, 0.5), dvec3(1.0, 0.0, 0.0))), None);
-			assert_eq!(node.intersect(Cube::new(ivec3(0, 0, 0), S), &DRay::new(dvec3(-1.0, 0.5, 0.5), dvec3(-1.0, 0.0, 0.0))), None);
+			assert_eq!(node.intersect(Cube::new(ivec3(0, 0, 0), S), &Ray64::new(dvec3(-1.0, 0.5, 0.5), dvec3(1.0, 0.0, 0.0))), None);
+			assert_eq!(node.intersect(Cube::new(ivec3(0, 0, 0), S), &Ray64::new(dvec3(-1.0, 0.5, 0.5), dvec3(-1.0, 0.0, 0.0))), None);
 		}
 	}
 

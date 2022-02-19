@@ -6,7 +6,7 @@ mod gl_client;
 pub mod net;
 pub mod physics;
 mod voxel_world;
-mod voxelstore;
+pub mod voxelstore;
 
 pub use editor::EdState;
 pub use game_state::*;

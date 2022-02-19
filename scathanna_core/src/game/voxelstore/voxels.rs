@@ -54,6 +54,10 @@ impl Voxels {
 		}
 	}
 
+	pub fn at_pos(&self, pos: vec3) -> VoxelType {
+		self.at(Self::round_to_voxelf(pos))
+	}
+
 	pub fn iter_cell_positions(&self) -> impl Iterator<Item = ivec3> + '_ {
 		self.cells.keys().copied()
 	}
@@ -209,16 +213,16 @@ impl Voxels {
 	}
 
 	/// Intersect ray with voxels, return voxel type and intersection distance along ray.
-	pub fn intersect(&self, ray: &DRay) -> Option<(VoxelType, f64)> {
+	pub fn intersect(&self, ray: &Ray64) -> Option<(VoxelType, f64)> {
 		let cell_pos = ray
 			.start //
 			.map(|v| v as i32)
 			.map(Self::align_down);
 
 		let mut result = None;
-		for dx in -2..=2 {
-			for dy in -2..=2 {
-				for dz in -2..=2 {
+		for dx in -4..=4 {
+			for dy in -4..=4 {
+				for dz in -4..=4 {
 					let cell_pos = cell_pos + Self::ICELL_SIZE * ivec3(dx, dy, dz);
 					if let Some(node) = self.cell_at(cell_pos) {
 						result = frontmost(result, node.intersect(Cube::new(cell_pos, Self::CELL_SIZE), ray))
@@ -229,7 +233,7 @@ impl Voxels {
 		result
 	}
 
-	pub fn intersects(&self, ray: &DRay) -> bool {
+	pub fn intersects(&self, ray: &Ray64) -> bool {
 		let cell_pos = ray
 			.start //
 			.map(|v| v as i32)
@@ -251,17 +255,21 @@ impl Voxels {
 		return false;
 	}
 
-	pub fn intersection_point(&self, ray: &DRay) -> Option<vec3> {
+	pub fn intersection_point(&self, ray: &Ray64) -> Option<vec3> {
 		self.intersect(&ray).map(|(_, t)| ray.at(t - 1e-3)).map(|v| v.map(|v| v as f32))
 	}
 
 	/// Voxel position where `ray` intersects the world.
 	/// Pass a small forward or backward `offset` to select the voxel right before or right behind the intersection.
-	pub fn intersect_voxel(&self, ray: &DRay, offset: f64) -> Option<ivec3> {
+	pub fn intersect_voxel(&self, ray: &Ray64, offset: f64) -> Option<ivec3> {
 		self.intersect(&ray).map(|(_, t)| Self::round_to_voxel(ray.at(t + offset)))
 	}
 
 	fn round_to_voxel(pos: dvec3) -> ivec3 {
+		pos.map(|v| v.floor() as i32)
+	}
+
+	fn round_to_voxelf(pos: vec3) -> ivec3 {
 		pos.map(|v| v.floor() as i32)
 	}
 
@@ -302,12 +310,12 @@ impl Voxels {
 	}
 
 	pub fn bumps(&self, bounds: &BoundingBox<f32>) -> bool {
-		let imin = bounds.min.map(f32::floor).to_ivec();
-		let imax = bounds.max.map(f32::ceil).to_ivec();
+		let imin = bounds.min.map(f32::floor).floor();
+		let imax = bounds.max.map(f32::ceil).floor();
 
-		for iz in imin.z..=imax.z {
-			for iy in imin.y..=imax.y {
-				for ix in imin.x..=imax.x {
+		for iz in imin.z()..=imax.z() {
+			for iy in imin.y()..=imax.y() {
+				for ix in imin.x()..=imax.x() {
 					let pos = ivec3(ix, iy, iz);
 					if !self.at(pos).is_empty() {
 						return true;
@@ -356,10 +364,10 @@ mod test {
 		let mut s = Voxels::new();
 
 		s.set_range(&Cuboid::cube(ivec3(0, 0, 0), 1), VoxelType(2));
-		assert_eq!(s.intersect(&DRay::new(dvec3(-1.0, 0.5, 0.5), dvec3(1.0, 0.0, 0.0))), Some((VoxelType(2), 1.0)));
+		assert_eq!(s.intersect(&Ray64::new(dvec3(-1.0, 0.5, 0.5), dvec3(1.0, 0.0, 0.0))), Some((VoxelType(2), 1.0)));
 
 		s.set_range(&Cuboid::cube(ivec3(0, -10, 0), 1), VoxelType(2));
-		assert_eq!(s.intersect(&DRay::new(dvec3(0.5, -7.0, 0.5), dvec3(0.0, -1.0, 0.0))), Some((VoxelType(2), 2.0)));
+		assert_eq!(s.intersect(&Ray64::new(dvec3(0.5, -7.0, 0.5), dvec3(0.0, -1.0, 0.0))), Some((VoxelType(2), 2.0)));
 	}
 
 	fn sort_by<T, F>(mut v: Vec<T>, compare: F) -> Vec<T>
@@ -416,7 +424,7 @@ mod test {
 		store.set_range(&Cuboid::cube(ivec3(2, 4, -4), 1), VoxelType(2));
 
 		let cmp_cubes = |a: &(Cube, VoxelType), b: &(Cube, VoxelType)| {
-			(a.0.position().x, a.0.position().y, a.0.position().z, a.0.size(), a.1 .0).cmp(&(b.0.position().x, b.0.position().y, b.0.position().z, b.0.size(), b.1 .0))
+			(a.0.position().x(), a.0.position().y(), a.0.position().z(), a.0.size(), a.1 .0).cmp(&(b.0.position().x(), b.0.position().y(), b.0.position().z(), b.0.size(), b.1 .0))
 		};
 
 		let cell_pos = ivec3(0, 0, -Voxels::ICELL_SIZE);

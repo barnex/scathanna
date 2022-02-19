@@ -124,8 +124,8 @@ impl Engine {
 		let mut char_pos = pos - vec2(0.0, Self::FONT_VSIZE);
 		for &byte in text.as_bytes() {
 			if byte == b'\n' {
-				char_pos.x = pos.x;
-				char_pos.y -= Self::FONT_VSIZE;
+				char_pos[0] = pos.x();
+				char_pos[1] -= Self::FONT_VSIZE;
 				continue;
 			}
 
@@ -134,7 +134,7 @@ impl Engine {
 
 			self.draw_triangles(&self.font_char_vao);
 
-			char_pos.x += Self::FONT_HSIZE;
+			char_pos[0] += Self::FONT_HSIZE;
 		}
 
 		self.set_depth_test(true);
@@ -414,7 +414,7 @@ impl Engine {
 		let size = img.dimensions().into();
 		Rc::new(
 			Texture::new2d(gl::RGBA8, NO_MIPMAP_LEVELS, size) //
-				.sub_image2d(0, 0, 0, size.x, size.y, gl::RGBA, gl::UNSIGNED_BYTE, &img.raw_rgba())
+				.sub_image2d(0, 0, 0, size.x(), size.y(), gl::RGBA, gl::UNSIGNED_BYTE, &img.raw_rgba())
 				.filter_linear(),
 		)
 	}
@@ -484,7 +484,7 @@ impl Engine {
 
 	// Fix texture orientation to be blender-compatible.
 	fn flip_texcoords_y(mut texcoords: Vec<vec2>) -> Vec<vec2> {
-		texcoords.iter_mut().for_each(|t| t.y = 1.0 - t.y);
+		texcoords.iter_mut().for_each(|t| t[1] = 1.0 - t.y());
 		texcoords
 	}
 }

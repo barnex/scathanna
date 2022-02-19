@@ -9,8 +9,8 @@ mod model;
 mod modelbuffer;
 mod orientation;
 mod shaders;
-mod texture_management;
 mod sound_pack;
+mod texture_management;
 mod util;
 
 pub use camera::*;
@@ -22,8 +22,8 @@ pub use model::*;
 pub use modelbuffer::*;
 pub use orientation::*;
 pub use shaders::*;
-pub use util::*;
 pub use sound_pack::*;
+pub use util::*;
 
 pub use std::rc::Rc;
 

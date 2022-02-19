@@ -21,8 +21,8 @@ impl Camera {
 	}
 
 	// Ray starting from the camera, going through the crosshair.
-	pub fn crosshair_ray(&self) -> DRay {
-		DRay::new(self.position.into(), self.orientation.look_dir().into())
+	pub fn crosshair_ray(&self) -> Ray64 {
+		Ray64::new(self.position.into(), self.orientation.look_dir().into())
 	}
 
 	pub fn can_see(&self, pos: vec3) -> bool {

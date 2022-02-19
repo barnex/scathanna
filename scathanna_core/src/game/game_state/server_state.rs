@@ -162,7 +162,7 @@ impl ServerState {
 		}
 
 		const WORLD_BOTTOM: f32 = -1024.0;
-		if self.player(player_id).position().y < WORLD_BOTTOM {
+		if self.player(player_id).position().y() < WORLD_BOTTOM {
 			self.kill_player(player_id);
 			self.log(format!("{} fell off the world", &self.player(player_id).name));
 			self.hud_message(player_id, "You fell off the world".to_owned());

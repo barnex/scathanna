@@ -4,7 +4,7 @@ mod engine;
 mod event_handler;
 pub mod game;
 mod input;
-mod internal;
+pub mod internal;
 pub mod util;
 
 pub use config::*;

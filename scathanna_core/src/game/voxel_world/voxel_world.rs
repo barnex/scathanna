@@ -77,7 +77,7 @@ impl VoxelWorld {
 
 	pub fn lightmap_file(dir: &Path, cell_pos: ivec3) -> PathBuf {
 		let hex = |i| i as u16;
-		dir.join(format!("lm_{:04x}_{:04x}_{:04x}.png", hex(cell_pos.x), hex(cell_pos.y), hex(cell_pos.z)))
+		dir.join(format!("lm_{:04x}_{:04x}_{:04x}.png", hex(cell_pos.x()), hex(cell_pos.y()), hex(cell_pos.z())))
 	}
 
 	fn mark_dirty_vao(&mut self, range: &Cuboid) {

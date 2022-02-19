@@ -41,7 +41,7 @@ pub fn fallback_texture(replacement_color: vec3) -> Texture {
 
 	let levels = 1;
 	Texture::new2d(gl::RGBA8, levels, size) //
-		.sub_image2d(0, 0, 0, size.x, size.y, gl::RGBA, gl::UNSIGNED_BYTE, &data)
+		.sub_image2d(0, 0, 0, size.x(), size.y(), gl::RGBA, gl::UNSIGNED_BYTE, &data)
 		.wrap_repeat()
 		.parameteri(gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32)
 		.parameteri(gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32)
@@ -57,5 +57,5 @@ fn load_texture(levels: u32, fname: &Path) -> Result<Texture> {
 fn image_texture(levels: u32, size: uvec2, raw_bgra: &[[u8; 4]]) -> Texture {
 	debug_assert!(levels > 0);
 	Texture::new2d(gl::RGBA8, levels, size) //
-		.sub_image2d(0, 0, 0, size.x, size.y, gl::RGBA, gl::UNSIGNED_BYTE, &raw_bgra)
+		.sub_image2d(0, 0, 0, size.x(), size.y(), gl::RGBA, gl::UNSIGNED_BYTE, &raw_bgra)
 }

@@ -1,9 +1,9 @@
 {
 	"server": "34.76.202.148:80",
-	"name": "Nameless player",
-	"avatar": "hamster",
+	"name": "Nameless Player",
+	"avatar": "chicken",
 	"movement_keys": "wasd",
-	"mouse_sensitivity": 100,
+	"mouse_sensitivity": 150,
 	"window_width": 1024,
 	"window_height": 768,
 	"window_resizable": true,

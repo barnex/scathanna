@@ -76,7 +76,7 @@ pub fn and(a: bool, b: bool) -> bool {
 
 pub fn is_aligned_to(v: ivec3, align: u32) -> bool {
 	let align = align as i32;
-	v.x % align == 0 && v.y % align == 0 && v.z % align == 0
+	v.x() % align == 0 && v.y() % align == 0 && v.z() % align == 0
 }
 
 #[cfg(test)]

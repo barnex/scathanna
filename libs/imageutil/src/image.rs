@@ -56,16 +56,22 @@ where
 
 	pub fn at<P: Into<uvec2>>(&self, p: P) -> C {
 		let p: uvec2 = p.into();
-		self[p.y as usize][p.x as usize]
+		self[p.y() as usize][p.x() as usize]
 	}
 
 	pub fn at_mut<P: Into<uvec2>>(&mut self, p: P) -> &mut C {
 		let p: uvec2 = p.into();
-		&mut self[p.y as usize][p.x as usize]
+		&mut self[p.y() as usize][p.x() as usize]
 	}
 
 	pub fn set(&mut self, p: (u32, u32), c: C) {
 		self[p.1 as usize][p.0 as usize] = c;
+	}
+
+	pub fn try_set(&mut self, p: (u32, u32), c: C) {
+		if p.0 < self.width() && p.1 < self.height() {
+			self[p.1 as usize][p.0 as usize] = c;
+		}
 	}
 
 	/// width of the image, in pixels

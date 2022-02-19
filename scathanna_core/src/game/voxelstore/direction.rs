@@ -10,11 +10,9 @@ pub enum Direction {
 	Z = 5,
 }
 
-use Direction::*;
-
 impl Direction {
 	/// All directions, handy for iterating over.
-	pub const ALL: [Direction; 6] = [MinusX, X, MinusY, Y, MinusZ, Z];
+	pub const ALL: [Direction; 6] = [Direction::MinusX, Direction::X, Direction::MinusY, Direction::Y, Direction::MinusZ, Direction::Z];
 
 	pub fn ivec(self) -> ivec3 {
 		use Direction::*;

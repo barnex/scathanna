@@ -85,7 +85,7 @@ impl Shaders {
 	pub fn use_uniform_color(&self, color: vec3, transf: &mat4) {
 		let prog = &self.uniform_color.base.prog;
 		self.lazy_switch(prog);
-		prog.uniform3f(self.uniform_color.uniform_color, color.x, color.y, color.z);
+		prog.uniform3f(self.uniform_color.uniform_color, color.x(), color.y(), color.z());
 		prog.uniform_matrix4f(self.uniform_color.base.model, false, transf.as_array());
 		prog.uniform_matrix4f(self.uniform_color.base.proj, false, self.projection_matrix.get().as_array());
 	}
@@ -110,7 +110,7 @@ impl Shaders {
 	pub fn use_matte_texture(&self, sun_dir: vec3, ambient: f32, transf: &mat4) {
 		let prog = &self.matte_texture.base.prog;
 		self.lazy_switch(prog);
-		prog.uniform3f(self.matte_texture.sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
+		prog.uniform3f(self.matte_texture.sun_dir, sun_dir.x(), sun_dir.y(), sun_dir.z());
 		prog.uniform1f(self.matte_texture.ambient, ambient);
 		prog.uniform_matrix4f(self.matte_texture.base.model, false, transf.as_array());
 		prog.uniform_matrix4f(self.matte_texture.base.proj, false, self.projection_matrix.get().as_array());
@@ -122,10 +122,10 @@ impl Shaders {
 		let prog = &shader.base.prog;
 		self.lazy_switch(prog);
 		let cam_pos = self.cam_pos.get();
-		prog.uniform3f(shader.sun_dir, sun_dir.x, sun_dir.y, sun_dir.z);
+		prog.uniform3f(shader.sun_dir, sun_dir.x(), sun_dir.y(), sun_dir.z());
 		prog.uniform1f(shader.sun_intens, sun_intens);
 		prog.uniform1f(shader.ambient, ambient);
-		prog.uniform3f(shader.cam_pos, cam_pos.x, cam_pos.y, cam_pos.z);
+		prog.uniform3f(shader.cam_pos, cam_pos.x(), cam_pos.y(), cam_pos.z());
 		prog.uniform_matrix4f(shader.base.model, false, transf.as_array());
 		prog.uniform_matrix4f(shader.base.proj, false, self.projection_matrix.get().as_array());
 	}
@@ -146,7 +146,7 @@ impl Shaders {
 		self.lazy_switch(prog);
 		prog.uniform1f(self.particles.gravity, gravity);
 		prog.uniform1f(self.particles.time, time);
-		prog.uniform4f(self.particles.color, color.x, color.y, color.z, alpha);
+		prog.uniform4f(self.particles.color, color.x(), color.y(), color.z(), alpha);
 		prog.uniform_matrix4f(self.particles.base.model, false, transf.as_array());
 		prog.uniform_matrix4f(self.particles.base.model, false, transf.as_array());
 		prog.uniform_matrix4f(self.particles.base.proj, false, self.projection_matrix.get().as_array());
@@ -156,9 +156,9 @@ impl Shaders {
 	pub fn use_font(&self, tex_offset: vec2, pos_offset: vec2, color: vec3) {
 		let prog = &self.font.prog;
 		self.lazy_switch(prog);
-		prog.uniform2f(self.font.tex_offset, tex_offset.x, tex_offset.y);
-		prog.uniform2f(self.font.pos_offset, pos_offset.x, pos_offset.y);
-		prog.uniform3f(self.font.color, color.x, color.y, color.z);
+		prog.uniform2f(self.font.tex_offset, tex_offset.x(), tex_offset.y());
+		prog.uniform2f(self.font.pos_offset, pos_offset.x(), pos_offset.y());
+		prog.uniform3f(self.font.color, color.x(), color.y(), color.z());
 		prog.uniform_matrix4f(self.font.proj, false, self.isometric_matrix.get().as_array());
 	}
 

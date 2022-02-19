@@ -1,6 +1,7 @@
 use super::internal::*;
 
 /// The immutable portion of a GameState.
+/// This is the data that is persisted to disk.
 pub struct MapData {
 	pub name: String,
 	pub voxels: Voxels,
@@ -10,6 +11,14 @@ pub struct MapData {
 impl MapData {
 	pub const VOXEL_FILE: &'static str = "voxels.bincode.gz";
 	pub const METADATA_FILE: &'static str = "metadata.json";
+
+	pub fn new(name: String) -> Self {
+		Self {
+			name,
+			voxels: default(),
+			metadata: default(),
+		}
+	}
 
 	pub fn load(map_name: &str) -> Result<Self> {
 		let dir = map_directory(map_name);
@@ -29,7 +38,7 @@ impl MapData {
 	}
 
 	/// Where does a ray intersect the map, if any.
-	pub fn intersect(&self, ray: &DRay) -> Option<f64> {
+	pub fn intersect(&self, ray: &Ray64) -> Option<f64> {
 		self.voxels.intersect(ray).map(|(_, t)| t)
 	}
 }

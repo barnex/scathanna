@@ -31,7 +31,7 @@ impl World {
 	/// (to avoid shooting yourself right where the line of fire exits your hitbox).
 	/// Returns intersection distance along the ray
 	/// and  the ID of the nearest hit player, if any.
-	pub fn intersect_except(&self, player_id: ID, ray: &DRay) -> Option<(f64, Option<ID>)> {
+	pub fn intersect_except(&self, player_id: ID, ray: &Ray64) -> Option<(f64, Option<ID>)> {
 		let intersect_map = self.map.intersect(ray);
 
 		let mut nearest = intersect_map.map(|t| (t, None));

@@ -49,6 +49,10 @@ pub use std::sync::Arc;
 pub use std::time::Duration;
 pub use std::time::Instant;
 
+pub const X: usize = 0;
+pub const Y: usize = 1;
+pub const Z: usize = 2;
+
 pub type CowStr = Cow<'static, str>;
 
 /// Shorthand for `Default::default()`.

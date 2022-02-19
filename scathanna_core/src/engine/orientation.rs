@@ -34,7 +34,7 @@ impl Orientation {
 	/// Direction 90 degrees right of look_dir
 	pub fn look_right(&self) -> vec3 {
 		let look = self.look_dir();
-		vec3(-look.z, 0.0, look.x)
+		vec3(-look.z(), 0.0, look.x())
 	}
 
 	/// Rotate a vector by this orientation's yaw angle,

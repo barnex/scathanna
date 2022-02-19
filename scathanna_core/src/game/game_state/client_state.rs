@@ -142,7 +142,7 @@ impl ClientState {
 	fn is_obstructed(&self, pos1: vec3, pos2: vec3) -> bool {
 		let dir = (pos2 - pos1).normalized();
 		let len = (pos2 - pos1).len();
-		let ray = DRay::new(pos1.into(), dir.into());
+		let ray = Ray64::new(pos1.into(), dir.into());
 		let t = self.world.map.intersect(&ray).unwrap_or(f64::INFINITY) as f32;
 		t < len
 	}
@@ -215,7 +215,7 @@ impl ClientState {
 
 	fn make_footstep_sounds(&self, player_id: ID, prev: &LocalState, curr: &LocalState) {
 		let speed = self.world.players[player_id].skeleton.velocity;
-		let vspeed = speed.y;
+		let vspeed = speed.y();
 		let walking = { vspeed == 0.0 && speed != vec3::ZERO };
 
 		if walking {
@@ -303,9 +303,9 @@ impl ClientState {
 }
 
 fn azimuth(frame: &Frame, sound_pos: vec3) -> f32 {
-	let sound_dir = (sound_pos - frame.position).with(|v| v.y = 0.0).normalized();
-	let look_dir = frame.orientation.look_dir().with(|v| v.y = 0.0).normalized();
-	let sin_theta = look_dir.cross(sound_dir).y;
+	let sound_dir = (sound_pos - frame.position).with(|v| v[Y] = 0.0).normalized();
+	let look_dir = frame.orientation.look_dir().with(|v| v[Y] = 0.0).normalized();
+	let sin_theta = look_dir.cross(sound_dir).y();
 	let cos_theta = look_dir.dot(sound_dir);
 	let azimuth = f32::atan2(sin_theta, cos_theta);
 	if azimuth.is_nan() {

@@ -108,7 +108,7 @@ impl Player {
 
 	pub fn is_on_lava(&self, world: &World) -> bool {
 		let probe = self.position() - 0.2 * vec3::EY;
-		world.map.voxels.at(probe.to_ivec()) == VoxelType::LAVA
+		world.map.voxels.at(probe.floor()) == VoxelType::LAVA
 	}
 
 	fn gun_cooldown(&self, world: &World) -> f32 {
@@ -145,7 +145,7 @@ impl Player {
 		}
 
 		// effect when shooting lava
-		if world.map.voxels.at(end.to_ivec()) == VoxelType::LAVA {
+		if world.map.voxels.at_pos(end) == VoxelType::LAVA {
 			upd.push(AddEffect(Effect::particle_explosion(end, RED)));
 			upd.push(PlaySound(SoundEffect::spatial("lava", end, 1.0)))
 		}
@@ -160,7 +160,7 @@ impl Player {
 		self.skeleton.tick(upd, world, dt);
 	}
 
-	fn tick_walk(&mut self, upd: &mut ClientMsgs, input_state: &InputState, world: &World, dt: f32) {
+	fn tick_walk(&mut self, _upd: &mut ClientMsgs, input_state: &InputState, world: &World, dt: f32) {
 		let walk_speed = Self::WALK_SPEED * walk_dir(self.orientation().yaw, input_state);
 		self.skeleton.try_walk(dt, world, walk_speed);
 	}
@@ -180,7 +180,7 @@ impl Player {
 
 	pub fn animate_feet(&mut self, dt: f32) {
 		let walk_speed = self.skeleton.velocity;
-		let vspeed = self.skeleton.velocity.y;
+		let vspeed = self.skeleton.velocity.y();
 		if walk_speed != vec3::ZERO {
 			// move feet in semicircles while moving
 			self.local.feet_phase += dt * FEET_ANIM_SPEED;
@@ -240,16 +240,16 @@ impl Player {
 	}
 
 	/// Ray looking through the player's crosshair.
-	pub fn line_of_sight(&self) -> DRay {
-		DRay::new(self.camera().position.into(), self.orientation().look_dir().into())
+	pub fn line_of_sight(&self) -> Ray64 {
+		Ray64::new(self.camera().position.into(), self.orientation().look_dir().into())
 	}
 
 	/// Ray from the player's gun nozzle to where the player is looking.
 	/// I.e., the trajectory a bullet would follow.
-	pub fn line_of_fire(&self, world: &World) -> DRay {
+	pub fn line_of_fire(&self, world: &World) -> Ray64 {
 		let start = self.gun_center();
 		let look_at = self.look_at(world);
-		let shoot_from_gun = DRay::new(start.into(), (look_at - start).normalized().into());
+		let shoot_from_gun = Ray64::new(start.into(), (look_at - start).normalized().into());
 
 		// Because of parallax between the nozzle and camera position,
 		// an object can sometimes be in front of the gun but not in front of the camera.
@@ -274,7 +274,7 @@ impl Player {
 	/// use `line_of_fire().start` for that.
 	fn gun_center(&self) -> vec3 {
 		let gun_internal = self.gun_pos_internal();
-		self.position() + self.skeleton.orientation.look_right() * gun_internal.x + gun_internal.y * vec3::EY
+		self.position() + self.skeleton.orientation.look_right() * gun_internal.x() + gun_internal.y() * vec3::EY
 	}
 
 	/// Position the user is looking at.
@@ -300,10 +300,10 @@ impl Player {
 	}
 
 	/// Intersect ray with player hitbox.
-	pub fn intersect(&self, ray: &DRay) -> Option<f64> {
+	pub fn intersect(&self, ray: &Ray64) -> Option<f64> {
 		// Cannot get hit if not spawned.
 		match self.spawned {
-			true => self.skeleton.bounds().to_f64().intersect(ray),
+			true => self.skeleton.bounds().convert::<f64>().intersect(ray),
 			false => None,
 		}
 	}

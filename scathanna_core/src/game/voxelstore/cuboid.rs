@@ -61,22 +61,27 @@ impl Cuboid {
 	}
 
 	pub fn is_empty(&self) -> bool {
-		self.min.x >= self.max.x || //.
-		self.min.y >= self.max.y ||
-		self.min.z >= self.max.z
+		self.min.x() >= self.max.x() || //.
+		self.min.y() >= self.max.y() ||
+		self.min.z() >= self.max.z()
 	}
 
 	pub fn contains(&self, idx: ivec3) -> bool {
-		idx.x >= self.min.x && //.
-		idx.y >= self.min.y &&
-		idx.z >= self.min.z && 
-		idx.x < self.max.x && 
-		idx.y < self.max.y &&
-		idx.z < self.max.z
+		idx.x() >= self.min.x() && //.
+		idx.y() >= self.min.y() &&
+		idx.z() >= self.min.z() && 
+		idx.x() < self.max.x() && 
+		idx.y() < self.max.y() &&
+		idx.z() < self.max.z()
 	}
 
 	pub fn contains_range(&self, other: &Cuboid) -> bool {
-		self.min.x <= other.min.x && self.min.y <= other.min.y && self.min.z <= other.min.z && self.max.x >= other.max.x && self.max.y >= other.max.y && self.max.z >= other.max.z
+		self.min.x() <= other.min.x() && //.
+		self.min.y() <= other.min.y() && 
+		self.min.z() <= other.min.z() && 
+		self.max.x() >= other.max.x() && 
+		self.max.y() >= other.max.y() && 
+		self.max.z() >= other.max.z()
 	}
 
 	pub fn iter(&self) -> impl Iterator<Item = ivec3> {
@@ -90,19 +95,19 @@ impl Cuboid {
 	pub fn iter_by(&self, step: u32) -> impl Iterator<Item = ivec3> {
 		// TODO: real iterator, don't collect first.
 		let step = step as i32;
-		debug_assert!(self.size().x % step == 0);
-		debug_assert!(self.size().y % step == 0);
-		debug_assert!(self.size().z % step == 0);
+		debug_assert!(self.size().x() % step == 0);
+		debug_assert!(self.size().y() % step == 0);
+		debug_assert!(self.size().z() % step == 0);
 
 		let (min, max) = (self.min, self.max);
 		let mut items = Vec::new();
 
-		let mut z = min.z;
-		while z < max.z {
-			let mut y = min.y;
-			while y < max.y {
-				let mut x = min.x;
-				while x < max.x {
+		let mut z = min.z();
+		while z < max.z() {
+			let mut y = min.y();
+			while y < max.y() {
+				let mut x = min.x();
+				while x < max.x() {
 					items.push(ivec3(x, y, z));
 					x += step;
 				}

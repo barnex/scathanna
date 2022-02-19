@@ -24,10 +24,10 @@ impl Skeleton {
 	}
 
 	pub fn tick(&mut self, upd: &mut ClientMsgs, world: &World, dt: f32) {
-		let v1 = self.velocity.y;
+		let v1 = self.velocity.y();
 		self.tick_gravity(G, dt);
 		self.tick_move(world, dt);
-		let v2 = self.velocity.y;
+		let v2 = self.velocity.y();
 		if v1 < -1.0 && v2 == 0.0 {
 			upd.push(ClientMsg::PlaySound(SoundEffect::spatial("land", self.position, 0.3)));
 		}
@@ -41,9 +41,9 @@ impl Skeleton {
 		let sub_delta = delta / 16.0;
 
 		for _i in 0..16 {
-			let dx = vec3(sub_delta.x, 0.0, 0.0);
-			let dy = vec3(0.0, sub_delta.y, 0.0);
-			let dz = vec3(0.0, 0.0, sub_delta.z);
+			let dx = vec3(sub_delta.x(), 0.0, 0.0);
+			let dy = vec3(0.0, sub_delta.y(), 0.0);
+			let dz = vec3(0.0, 0.0, sub_delta.z());
 
 			if self.pos_ok(world, self.position + dx) {
 				self.position += dx;
@@ -54,7 +54,7 @@ impl Skeleton {
 			if self.pos_ok(world, self.position + dy) {
 				self.position += dy;
 			} else {
-				self.velocity.y = 0.0;
+				self.velocity[Y] = 0.0;
 			}
 
 			if self.pos_ok(world, self.position + dz) {
@@ -65,16 +65,16 @@ impl Skeleton {
 		}
 
 		// stair climbing
-		if (xbump || zbump) && self.velocity.y >= 0.0 {
-			let probe_pos = self.position + vec3(delta.x, 2.1, delta.z); // what if we kept moving horizontally and took one step up?
+		if (xbump || zbump) && self.velocity.y() >= 0.0 {
+			let probe_pos = self.position + vec3(delta.x(), 2.1, delta.z()); // what if we kept moving horizontally and took one step up?
 			if self.pos_ok(world, probe_pos) {
-				self.position += vec3(delta.x, 0.0, delta.z);
+				self.position += vec3(delta.x(), 0.0, delta.z());
 			} else {
 				if xbump {
-					self.velocity.x = 0.0;
+					self.velocity[X] = 0.0;
 				}
 				if zbump {
-					self.velocity.z = 0.0;
+					self.velocity[Z] = 0.0;
 				}
 			}
 		}
@@ -83,7 +83,7 @@ impl Skeleton {
 	// rescue player if somehow stuck inside a block: move them up.
 	fn tick_rescue(&mut self, world: &World, dt: f32) {
 		if !self.pos_ok(world, self.position) {
-			self.position.y += STAIRCLIMB_SPEED * dt;
+			self.position[Y] += STAIRCLIMB_SPEED * dt;
 		}
 	}
 
@@ -103,7 +103,7 @@ impl Skeleton {
 	}
 
 	pub fn unconditional_jump(&mut self, jump_speed: f32) {
-		self.velocity.y = jump_speed
+		self.velocity[Y] = jump_speed
 	}
 
 	pub fn try_walk(&mut self, dt: f32, world: &World, walk_speed: vec3) {
@@ -111,8 +111,8 @@ impl Skeleton {
 		const AIRCTL_ACCEL: f32 = 2.0;
 
 		if self.on_ground(world) {
-			self.velocity.x = walk_speed.x;
-			self.velocity.z = walk_speed.z;
+			self.velocity[X] = walk_speed[X];
+			self.velocity[Z] = walk_speed[Z];
 		} else {
 			// flying through the air
 
@@ -164,7 +164,7 @@ impl Skeleton {
 	}
 
 	fn tick_gravity(&mut self, g: f32, dt: f32) {
-		self.velocity.y -= g * dt;
+		self.velocity[Y] -= g * dt;
 		let damp = 0.05;
 		self.velocity *= 1.0 - damp * dt;
 	}

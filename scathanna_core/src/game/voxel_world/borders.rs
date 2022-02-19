@@ -66,7 +66,7 @@ pub fn highlighted_edges(engine: &Engine, voxels: &Voxels) -> HashMap<ivec3, Mod
 
 	// Visit strands left-to-right so that we only have to join left's tail to right's head.
 	let mut sorted = dedup.into_iter().collect::<Vec<_>>();
-	sorted.sort_unstable_by_key(|e| (e.tangent, -e.start.x, -e.start.y, -e.start.z));
+	sorted.sort_unstable_by_key(|e| (e.tangent, -e.start.x(), -e.start.y(), -e.start.z()));
 	// Strands searchable by starting position, so that we can efficiently find neighbors.
 	let mut by_start: HashMap<(Direction, ivec3), Edge> = HashMap::default();
 	for edge in sorted.into_iter() {
@@ -140,25 +140,25 @@ fn edges(rect: &Rectangle) -> [Edge; 4] {
 	[
 		Edge {
 			start: o,
-			len: rect.size.x,
+			len: rect.size.x(),
 			tangent: du,
 			normal,
 		},
 		Edge {
-			start: o + (dv.ivec() * rect.size.y as i32),
-			len: rect.size.x,
+			start: o + (dv.ivec() * rect.size.y() as i32),
+			len: rect.size.x(),
 			tangent: du,
 			normal,
 		},
 		Edge {
 			start: o,
-			len: rect.size.y,
+			len: rect.size.y(),
 			tangent: dv,
 			normal,
 		},
 		Edge {
-			start: o + (du.ivec() * rect.size.x as i32),
-			len: rect.size.y,
+			start: o + (du.ivec() * rect.size.x() as i32),
+			len: rect.size.y(),
 			tangent: dv,
 			normal,
 		},

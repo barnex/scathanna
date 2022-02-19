@@ -54,7 +54,7 @@ impl mat4 {
 	// TODO: mul<vec4>
 	pub fn transform_point_ignore_w(&self, rhs: vec3) -> vec3 {
 		let m = self.el;
-		let (x, y, z) = (rhs.x, rhs.y, rhs.z);
+		let (x, y, z) = (rhs.x(), rhs.y(), rhs.z());
 		vec3(
 			m[0][0] * x + m[1][0] * y + m[2][0] * z,
 			m[0][1] * x + m[1][1] * y + m[2][1] * z,

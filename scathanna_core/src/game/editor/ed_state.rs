@@ -235,7 +235,7 @@ impl EdState {
 		// Request lightmap baking.
 		if self.input_state.is_pressed(Key::StartBake) {
 			self.log("Full bake...".into());
-			self.voxel_world.request_full_bake(self.camera.position.to_ivec(), &self.dir)
+			self.voxel_world.request_full_bake(self.camera.position.floor(), &self.dir)
 		}
 	}
 
@@ -255,7 +255,7 @@ impl EdState {
 	// Log the cursor size to screen and stdout.
 	fn log_cursor_size(&self) {
 		let size = self.aligned_cursor_range(ivec3(0, 0, 0)).size();
-		self.log(format!("{}x{}x{} cursor", size.x, size.y, size.z));
+		self.log(format!("{}x{}x{} cursor", size.x(), size.y(), size.z()));
 	}
 
 	// Draw the outline of a 3D cuboid that we would fill with blocks on click.

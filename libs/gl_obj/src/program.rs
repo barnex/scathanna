@@ -97,7 +97,7 @@ impl Program {
 		// TODO: glGetIntegerv(gl:CURRENT_PROGRAM) + restore
 		glUseProgram(self.handle());
 		let wgs = self.compute_work_group_size();
-		glDispatchCompute(global_size.x / wgs.0, global_size.y / wgs.1, global_size.z / wgs.2);
+		glDispatchCompute(global_size.x() / wgs.0, global_size.y() / wgs.1, global_size.z() / wgs.2);
 		glMemoryBarrier(gl::ALL_BARRIER_BITS);
 	}
 
