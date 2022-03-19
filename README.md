@@ -2,7 +2,9 @@
 
 A 3D multiplayer shooter.
 
-![fig](shots/video.webp)
+[![fig](shots/video.webp)](https://vimeo.com/679751924)
+
+Full video: [vimeo.com/679751924](https://vimeo.com/679751924)
 
 ## Quickstart
 
